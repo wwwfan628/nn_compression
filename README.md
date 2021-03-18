@@ -1,1 +1,1 @@
-# nn_compression
+# Semester Project: Rethinking Information Encoding in Network Compression
