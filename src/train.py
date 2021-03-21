@@ -7,6 +7,8 @@ import torch
 import torchvision
 import numpy as np
 import argparse
+import copy
+import os
 import time
 
 
@@ -32,13 +34,18 @@ def main(args):
     else:
         print('Architecture not supported! Please choose from: LeNet5, VGG and ResNet.')
 
-    # save initial parameters
+
 
     # train
+    init_param_path = './checkpoints/init_param_' + args.model_name + '_' + args.dataset_name + '.pth'
     if args.train_index:
-        train_index(model, dataloader_train, dataloader_test)
+        # load previously used parameters
+        model.load_state_dict(torch.load(init_param_path))
+        train_index(model, dataloader_train, dataloader_test, max_epoch=3)
     else:
-        train(model, dataloader_train, dataloader_test)
+        # save initial parameters
+        torch.save(model.state_dict(), init_param_path)
+        train(model, dataloader_train, dataloader_test, max_epoch=3)
 
 
 def load_dataset(dataset_name, batch_size=64):
@@ -112,8 +119,56 @@ def train(model, dataloader_train, dataloader_test, max_epoch=10000, lr=1e-3, pa
             if cur_step == patience:
                 break
 
+def reorder_weights(state_dict, state_dict_temp):
+    dict_reordered = state_dict
+    for (layer_key, layer_weights), (layer_key_temp, layer_weights_temp) in zip(state_dict.items(), state_dict_temp.items()):
+        weights_shape = layer_weights.shape
+        weights_flattened = layer_weights.flatten()
+        index_order = torch.argsort(layer_weights_temp.flatten())
+        dict_reordered[layer_key] = sort_1Dtensor_by_index(weights_flattened, index_order).view(weights_shape)
+    return dict_reordered
+
+
+def sort_1Dtensor_by_index(tensor_to_sort, index):
+    tensor_sorted = tensor_to_sort
+    for i in range(tensor_to_sort.shape[0]):
+        tensor_sorted[i] = tensor_to_sort[index[i]]
+    return tensor_sorted
+
+
 def train_index(model, dataloader_train, dataloader_test, max_epoch=10000, lr=1e-3, patience=20):
-    pass
+    dur = []  # duration for training epochs
+    loss_func = nn.CrossEntropyLoss()
+    max_accuracy = 0
+    cur_step = 0
+    for epoch in range(max_epoch):
+        t0 = time.time()  # start time
+        for i, (images, labels) in enumerate(dataloader_train):
+            model_temp = copy.deepcopy(model)
+            optimizer = optim.Adam(model_temp.parameters(), lr=lr)
+            images = images.to(device)
+            labels = labels.to(device)
+            model_temp.train()
+            optimizer.zero_grad()
+            pred = model_temp(images)
+            loss = loss_func(pred, labels)
+            loss.backward()
+            optimizer.step()
+            # reorder weights in each layer
+            state_dict_reordered = reorder_weights(model.state_dict(), model_temp.state_dict())
+            model.load_state_dict(state_dict_reordered)
+        # validate
+        dur.append(time.time() - t0)
+        accuracy = float(validate(model, dataloader_test))
+        print("Epoch {:05d} | Test Acc {:.4f}% | Time(s) {:.4f}".format(epoch + 1, accuracy, np.mean(dur)))
+        # early stop
+        if accuracy > max_accuracy:
+            max_accuracy = accuracy
+            cur_step = 0
+        else:
+            cur_step += 1
+            if cur_step == patience:
+                break
 
 
 if __name__ == '__main__':
