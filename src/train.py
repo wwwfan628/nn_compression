@@ -34,8 +34,6 @@ def main(args):
     else:
         print('Architecture not supported! Please choose from: LeNet5, VGG and ResNet.')
 
-
-
     # train
     init_param_path = './checkpoints/init_param_' + args.model_name + '_' + args.dataset_name + '.pth'
     if args.train_index:
@@ -46,6 +44,13 @@ def main(args):
         # save initial parameters
         torch.save(model.state_dict(), init_param_path)
         train(model, dataloader_train, dataloader_test, max_epoch=3)
+
+    # save weights
+    if args.train_index:
+        param_after_training_path = './checkpoints/param_after_training' + args.model_name + '_' + args.dataset_name + '_train_index.pth'
+    else:
+        param_after_training_path = './checkpoints/param_after_training' + args.model_name + '_' + args.dataset_name + '.pth'
+    torch.save(model.state_dict(), param_after_training_path)
 
 
 def load_dataset(dataset_name, batch_size=64):
@@ -137,6 +142,8 @@ def sort_1Dtensor_by_index(tensor_to_sort, index):
 
 
 def train_index(model, dataloader_train, dataloader_test, max_epoch=10000, lr=1e-3, patience=20):
+    model_temp = copy.deepcopy(model)
+    optimizer = optim.Adam(model_temp.parameters(), lr=lr)
     dur = []  # duration for training epochs
     loss_func = nn.CrossEntropyLoss()
     max_accuracy = 0
@@ -144,8 +151,8 @@ def train_index(model, dataloader_train, dataloader_test, max_epoch=10000, lr=1e
     for epoch in range(max_epoch):
         t0 = time.time()  # start time
         for i, (images, labels) in enumerate(dataloader_train):
-            model_temp = copy.deepcopy(model)
-            optimizer = optim.Adam(model_temp.parameters(), lr=lr)
+            with torch.no_grad():
+                model_temp.load_state_dict(model.state_dict())
             images = images.to(device)
             labels = labels.to(device)
             model_temp.train()
