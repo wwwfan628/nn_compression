@@ -32,25 +32,31 @@ def main(args):
     else:
         print('Architecture not supported! Please choose from: LeNet5, VGG and ResNet.')
 
+    # save initial parameters
+
     # train
     if args.train_index:
-        pass
+        train_index(model, dataloader_train, dataloader_test)
     else:
-        train(model, dataloader_train, dataloader_test, max_epoch=3)
+        train(model, dataloader_train, dataloader_test)
 
 
 def load_dataset(dataset_name, batch_size=64):
     # load dataset
-    transform = torchvision.transforms.Compose([torchvision.transforms.ToTensor()])
     if dataset_name == 'MNIST':
+        transform = torchvision.transforms.Compose([torchvision.transforms.ToTensor()])
         data_train = MNIST(root='../datasets/MNIST', train=True, download=True, transform=transform)
         data_test = MNIST(root='../datasets/MNIST', train=False, download=True, transform=transform)
     elif dataset_name == 'CIFAR10':
+        transform = torchvision.transforms.Compose([torchvision.transforms.ToTensor()])
         data_train = CIFAR10(root='../datasets/CIFAR10', train=True, download=True, transform=transform)
         data_test = CIFAR10(root='../datasets/CIFAR10', train=False, download=True, transform=transform)
     elif dataset_name == 'ImageNet':
-        data_train = ImageNet(root='../datasets/ImageNet', splite='train', download=True, transform=transform)
-        data_test = ImageNet(root='../datasets/ImageNet', splite='val', download=True, transform=transform)
+        transform = torchvision.transforms.Compose([torchvision.transforms.Resize(size=[256,480]),
+                                                    torchvision.transforms.RandomCrop(size=[224,224]),
+                                                    torchvision.transforms.ToTensor()])
+        data_train = torchvision.datasets.ImageFolder('../datasets/ImageNet/train', transform=transform)
+        data_test = torchvision.datasets.ImageFolder('../datasets/ImageNet/val', transform=transform)
     else:
         print('Dataset not supported! Please choose from: MNIST, CIFAR10 and ImageNet.')
     in_channels = data_train[0][0].shape[0]
@@ -105,6 +111,9 @@ def train(model, dataloader_train, dataloader_test, max_epoch=10000, lr=1e-3, pa
             cur_step += 1
             if cur_step == patience:
                 break
+
+def train_index(model, dataloader_train, dataloader_test, max_epoch=10000, lr=1e-3, patience=20):
+    pass
 
 
 if __name__ == '__main__':
