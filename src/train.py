@@ -26,7 +26,7 @@ def main(args):
 
     # build neural network
     if args.model_name == 'LeNet5':
-        model = LeNet5(in_channels=in_channels,num_classes=num_classes)
+        model = LeNet5(in_channels=in_channels, num_classes=num_classes)
     elif 'VGG' in args.model_name:
         model = VGG(in_channels=in_channels, num_classes=num_classes)
     elif 'ResNet' in args.model_name:
@@ -43,7 +43,7 @@ def main(args):
     else:
         # save initial parameters
         torch.save(model.state_dict(), init_param_path)
-        train(model, dataloader_train, dataloader_test, max_epoch=3)
+        train(model, dataloader_train, dataloader_test)
 
     # save weights
     if args.train_index:
@@ -51,6 +51,7 @@ def main(args):
     else:
         param_after_training_path = './checkpoints/param_after_training' + args.model_name + '_' + args.dataset_name + '.pth'
     torch.save(model.state_dict(), param_after_training_path)
+
 
 
 def load_dataset(dataset_name, batch_size=64):
@@ -78,6 +79,7 @@ def load_dataset(dataset_name, batch_size=64):
     return in_channels, num_classes, dataloader_train, dataloader_test
 
 
+
 def validate(model, dataloader_test):
     # validate
     total = 0
@@ -92,6 +94,7 @@ def validate(model, dataloader_test):
             total += x.size(0)
             correct += torch.sum(pred == labels)
     return correct*100.0/total
+
 
 
 def train(model, dataloader_train, dataloader_test, max_epoch=10000, lr=1e-3, patience=20):
@@ -124,6 +127,8 @@ def train(model, dataloader_train, dataloader_test, max_epoch=10000, lr=1e-3, pa
             if cur_step == patience:
                 break
 
+
+
 def reorder_weights(state_dict, state_dict_temp):
     dict_reordered = state_dict
     for (layer_key, layer_weights), (layer_key_temp, layer_weights_temp) in zip(state_dict.items(), state_dict_temp.items()):
@@ -134,11 +139,13 @@ def reorder_weights(state_dict, state_dict_temp):
     return dict_reordered
 
 
+
 def sort_1Dtensor_by_index(tensor_to_sort, index):
     tensor_sorted = tensor_to_sort
     for i in range(tensor_to_sort.shape[0]):
         tensor_sorted[i] = tensor_to_sort[index[i]]
     return tensor_sorted
+
 
 
 def train_index(model, dataloader_train, dataloader_test, max_epoch=10000, lr=1e-3, patience=20):
@@ -176,6 +183,7 @@ def train_index(model, dataloader_train, dataloader_test, max_epoch=10000, lr=1e
             cur_step += 1
             if cur_step == patience:
                 break
+
 
 
 if __name__ == '__main__':
