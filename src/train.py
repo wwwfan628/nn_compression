@@ -51,12 +51,12 @@ def load_dataset(dataset_name, batch_size=64):
     # load dataset
     if dataset_name == 'MNIST':
         transform = torchvision.transforms.Compose([torchvision.transforms.ToTensor()])
-        data_train = MNIST(root='../datasets/MNIST', train=True, download=True, transform=transform)
-        data_test = MNIST(root='../datasets/MNIST', train=False, download=True, transform=transform)
+        data_train = MNIST(root='../datasets', train=True, download=True, transform=transform)
+        data_test = MNIST(root='../datasets', train=False, download=True, transform=transform)
     elif dataset_name == 'CIFAR10':
         transform = torchvision.transforms.Compose([torchvision.transforms.ToTensor()])
-        data_train = CIFAR10(root='../datasets/CIFAR10', train=True, download=True, transform=transform)
-        data_test = CIFAR10(root='../datasets/CIFAR10', train=False, download=True, transform=transform)
+        data_train = CIFAR10(root='../datasets', train=True, download=True, transform=transform)
+        data_test = CIFAR10(root='../datasets', train=False, download=True, transform=transform)
     elif dataset_name == 'ImageNet':
         transform = torchvision.transforms.Compose([torchvision.transforms.Resize(size=[256,480]),
                                                     torchvision.transforms.RandomCrop(size=[224,224]),
