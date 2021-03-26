@@ -27,11 +27,11 @@ def main(args):
 
     # build neural network
     if args.model_name == 'LeNet5':
-        model = LeNet5(in_channels=in_channels, num_classes=num_classes)
+        model = LeNet5(in_channels=in_channels, num_classes=num_classes).to(device)
     elif 'VGG' in args.model_name:
-        model = VGG(in_channels=in_channels, num_classes=num_classes)
+        model = VGG(in_channels=in_channels, num_classes=num_classes).to(device)
     elif 'ResNet' in args.model_name:
-        model = ResNet(in_channels=in_channels, num_classes=num_classes)
+        model = ResNet(in_channels=in_channels, num_classes=num_classes).to(device)
     else:
         print('Architecture not supported! Please choose from: LeNet5, VGG and ResNet.')
 
