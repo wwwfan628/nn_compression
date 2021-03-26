@@ -91,7 +91,7 @@ def validate(model, dataloader_test):
 
 
 
-def train(model, dataloader_train, dataloader_test, train_index=False, max_epoch=10000, lr=1e-3, patience=20):
+def train(model, dataloader_train, dataloader_test, train_index=False, max_epoch=500, lr=1e-3, patience=20):
     dur = []  # duration for training epochs
     loss_func = nn.CrossEntropyLoss()
     if train_index:
