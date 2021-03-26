@@ -36,12 +36,13 @@ def main(args):
         print('Architecture not supported! Please choose from: LeNet5, VGG and ResNet.')
 
     # train
-    init_param_path = './checkpoints/init_param_' + args.model_name + '_' + args.dataset_name + '.pth'
     if args.train_index:
-        # load previously used parameters
-        model.load_state_dict(torch.load(init_param_path))
+        init_param_path = './checkpoints/init_param_' + args.model_name + '_' + args.dataset_name + '_train_index.pth'
+        # save initial parameters
+        torch.save(model.state_dict(), init_param_path)
         train(model, dataloader_train, dataloader_test, train_index=True)
     else:
+        init_param_path = './checkpoints/init_param_' + args.model_name + '_' + args.dataset_name + '.pth'
         # save initial parameters
         torch.save(model.state_dict(), init_param_path)
         train(model, dataloader_train, dataloader_test)
