@@ -1,6 +1,6 @@
 from torch.optim.optimizer import Optimizer
 import torch
-import src.utils._index_functional as F
+from ._index_functional import index_sgd, index_adam
 
 
 class Index_SGD(Optimizer):
@@ -57,7 +57,7 @@ class Index_SGD(Optimizer):
                     else:
                         momentum_buffer_list.append(state['momentum_buffer'])
 
-            F.index_sgd(params_with_grad, d_p_list, momentum_buffer_list, weight_decay, momentum, lr, dampening, nesterov)
+            index_sgd(params_with_grad, d_p_list, momentum_buffer_list, weight_decay, momentum, lr, dampening, nesterov)
 
             # update momentum_buffers in state
             for p, momentum_buffer in zip(params_with_grad, momentum_buffer_list):
@@ -153,6 +153,6 @@ class Index_Adam(Optimizer):
                     state_steps.append(state['step'])
 
             beta1, beta2 = group['betas']
-            F.index_adam(params_with_grad, grads, exp_avgs, exp_avg_sqs, max_exp_avg_sqs, state_steps, group['amsgrad'],
+            index_adam(params_with_grad, grads, exp_avgs, exp_avg_sqs, max_exp_avg_sqs, state_steps, group['amsgrad'],
                    beta1, beta2, group['lr'], group['weight_decay'], group['eps'])
         return loss

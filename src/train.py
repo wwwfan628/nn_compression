@@ -1,6 +1,6 @@
-from src.models.LeNet5 import LeNet5
-from src.models.VGG import VGG
-from src.models.ResNet import ResNet
+from models.LeNet5 import LeNet5
+from models.VGG import VGG
+from models.ResNet import ResNet
 from torch import nn, optim
 from torchvision.datasets import MNIST, CIFAR10, ImageNet
 import torch
@@ -10,7 +10,7 @@ import argparse
 import copy
 import os
 import time
-from src.utils.index_optimizer import Index_SGD, Index_Adam
+from utils.index_optimizer import Index_SGD, Index_Adam
 
 
 if torch.cuda.is_available():
@@ -99,7 +99,8 @@ def train(model, dataloader_train, dataloader_test, train_index=False, max_epoch
     else:
         optimizer = optim.SGD(model.parameters(), lr=lr)
         #optimizer = optim.Adam(model.parameters(), lr=lr)
-    max_accuracy = 0
+    best_test_acc = 0
+    corresp_train_acc = 0
     best_epoch = 0
     cur_step = 0
     for epoch in range(max_epoch):
@@ -115,13 +116,15 @@ def train(model, dataloader_train, dataloader_test, train_index=False, max_epoch
             optimizer.step()
         # validate
         dur.append(time.time() - t0)
-        accuracy = float(validate(model, dataloader_test))
-        print("Epoch {:05d} | Test Acc {:.4f}% | Time(s) {:.4f}".format(epoch + 1, accuracy, np.mean(dur)))
+        train_accuracy = float(validate(model, dataloader_train))
+        test_accuracy = float(validate(model, dataloader_test))
+        print("Epoch {:05d} | Training Acc {:.4f}% | Test Acc {:.4f}% | Time(s) {:.4f}".format(epoch + 1, train_accuracy, test_accuracy, np.mean(dur)))
         # early stop
-        if accuracy > max_accuracy:
-            max_accuracy = accuracy
-            cur_step = 0
+        if test_accuracy > best_test_acc:
+            best_test_acc = test_accuracy
+            corresp_train_acc = train_accuracy
             best_epoch = epoch + 1
+            cur_step = 0
             # save checkpoint
             if train_index:
                 param_after_training_path = './checkpoints/final_param_' + args.model_name + '_' + args.dataset_name + '_train_index.pth'
@@ -132,7 +135,8 @@ def train(model, dataloader_train, dataloader_test, train_index=False, max_epoch
             cur_step += 1
             if cur_step == patience:
                 break
-    print("Training finished! Best test accuracy = {:.4f}%, found at Epoch {:05d}.".format(max_accuracy, best_epoch))
+    print("Training finished! Best test accuracy = {:.4f}%, corresponding training accuracy = {:.4f}%, "
+          "found at Epoch {:05d}.".format(best_test_acc, corresp_train_acc, best_epoch))
 
 
 if __name__ == '__main__':
