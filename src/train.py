@@ -10,6 +10,7 @@ import argparse
 import copy
 import os
 import time
+from src.utils.index_optimizer import Index_SGD, Index_Adam
 
 
 if torch.cuda.is_available():
@@ -39,19 +40,11 @@ def main(args):
     if args.train_index:
         # load previously used parameters
         model.load_state_dict(torch.load(init_param_path))
-        train_index(model, dataloader_train, dataloader_test, max_epoch=3)
+        train(model, dataloader_train, dataloader_test, train_index=True)
     else:
         # save initial parameters
         torch.save(model.state_dict(), init_param_path)
         train(model, dataloader_train, dataloader_test)
-
-    # save weights
-    if args.train_index:
-        param_after_training_path = './checkpoints/param_after_training' + args.model_name + '_' + args.dataset_name + '_train_index.pth'
-    else:
-        param_after_training_path = './checkpoints/param_after_training' + args.model_name + '_' + args.dataset_name + '.pth'
-    torch.save(model.state_dict(), param_after_training_path)
-
 
 
 def load_dataset(dataset_name, batch_size=64):
@@ -97,11 +90,17 @@ def validate(model, dataloader_test):
 
 
 
-def train(model, dataloader_train, dataloader_test, max_epoch=10000, lr=1e-3, patience=20):
+def train(model, dataloader_train, dataloader_test, train_index=False, max_epoch=10000, lr=1e-3, patience=20):
     dur = []  # duration for training epochs
     loss_func = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=lr)
+    if train_index:
+        optimizer = Index_SGD(model.parameters())
+        #optimizer = Index_Adam(model.parameters())
+    else:
+        optimizer = optim.SGD(model.parameters(), lr=lr)
+        #optimizer = optim.Adam(model.parameters(), lr=lr)
     max_accuracy = 0
+    best_epoch = 0
     cur_step = 0
     for epoch in range(max_epoch):
         t0 = time.time()  # start time
@@ -122,68 +121,18 @@ def train(model, dataloader_train, dataloader_test, max_epoch=10000, lr=1e-3, pa
         if accuracy > max_accuracy:
             max_accuracy = accuracy
             cur_step = 0
+            best_epoch = epoch + 1
+            # save checkpoint
+            if train_index:
+                param_after_training_path = './checkpoints/final_param_' + args.model_name + '_' + args.dataset_name + '_train_index.pth'
+            else:
+                param_after_training_path = './checkpoints/final_param_' + args.model_name + '_' + args.dataset_name + '.pth'
+            torch.save(model.state_dict(), param_after_training_path)
         else:
             cur_step += 1
             if cur_step == patience:
                 break
-
-
-
-def reorder_weights(state_dict, state_dict_temp):
-    dict_reordered = state_dict
-    for (layer_key, layer_weights), (layer_key_temp, layer_weights_temp) in zip(state_dict.items(), state_dict_temp.items()):
-        weights_shape = layer_weights.shape
-        weights_flattened = layer_weights.flatten()
-        index_order = torch.argsort(layer_weights_temp.flatten())
-        dict_reordered[layer_key] = sort_1Dtensor_by_index(weights_flattened, index_order).view(weights_shape)
-    return dict_reordered
-
-
-
-def sort_1Dtensor_by_index(tensor_to_sort, index):
-    tensor_sorted = tensor_to_sort
-    for i in range(tensor_to_sort.shape[0]):
-        tensor_sorted[i] = tensor_to_sort[index[i]]
-    return tensor_sorted
-
-
-
-def train_index(model, dataloader_train, dataloader_test, max_epoch=10000, lr=1e-3, patience=20):
-    model_temp = copy.deepcopy(model)
-    optimizer = optim.Adam(model_temp.parameters(), lr=lr)
-    dur = []  # duration for training epochs
-    loss_func = nn.CrossEntropyLoss()
-    max_accuracy = 0
-    cur_step = 0
-    for epoch in range(max_epoch):
-        t0 = time.time()  # start time
-        for i, (images, labels) in enumerate(dataloader_train):
-            with torch.no_grad():
-                model_temp.load_state_dict(model.state_dict())
-            images = images.to(device)
-            labels = labels.to(device)
-            model_temp.train()
-            optimizer.zero_grad()
-            pred = model_temp(images)
-            loss = loss_func(pred, labels)
-            loss.backward()
-            optimizer.step()
-            # reorder weights in each layer
-            state_dict_reordered = reorder_weights(model.state_dict(), model_temp.state_dict())
-            model.load_state_dict(state_dict_reordered)
-        # validate
-        dur.append(time.time() - t0)
-        accuracy = float(validate(model, dataloader_test))
-        print("Epoch {:05d} | Test Acc {:.4f}% | Time(s) {:.4f}".format(epoch + 1, accuracy, np.mean(dur)))
-        # early stop
-        if accuracy > max_accuracy:
-            max_accuracy = accuracy
-            cur_step = 0
-        else:
-            cur_step += 1
-            if cur_step == patience:
-                break
-
+    print("Training finished! Best test accuracy = {:.4f}%, found at Epoch {:05d}.".format(max_accuracy, best_epoch))
 
 
 if __name__ == '__main__':
