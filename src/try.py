@@ -11,6 +11,8 @@ import copy
 import os
 import time
 from utils.index_optimizer import Index_SGD, Index_Adam
+from utils.initial_weight import prune_weighht, compute_conf_interval
+
 
 
 if torch.cuda.is_available():
@@ -34,6 +36,13 @@ def main(args):
         model = ResNet(in_channels=in_channels, num_classes=num_classes).to(device)
     else:
         print('Architecture not supported! Please choose from: LeNet5, VGG and ResNet.')
+
+    # preprocess parameters
+    with torch.no_grad():
+        l = [module for module in model.modules() if not isinstance(module, nn.Sequential)]
+        for layer in l[1:]:
+            min_value, max_value = compute_conf_interval(layer.weight)
+            prune_weighht(layer.weight, min_value, max_value)
 
     # train
     if args.train_index:
@@ -91,12 +100,12 @@ def validate(model, dataloader_test):
 
 
 
-def train(model, dataloader_train, dataloader_test, train_index=False, max_epoch=500, lr=1e-3, patience=20):
+def train(model, dataloader_train, dataloader_test, train_index=False, max_epoch=500, lr=1e-4, patience=30):
     dur = []  # duration for training epochs
     loss_func = nn.CrossEntropyLoss()
     if train_index:
-        optimizer = Index_SGD(model.parameters())
-        #optimizer = Index_Adam(model.parameters())
+        #optimizer = Index_SGD(model.parameters())
+        optimizer = Index_Adam(model.parameters())
     else:
         #optimizer = optim.SGD(model.parameters(), lr=lr)
         optimizer = optim.Adam(model.parameters(), lr=lr)

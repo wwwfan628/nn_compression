@@ -1,5 +1,5 @@
-from models.LeNet5 import LeNet5
-from models.VGG import VGG
+from models.LeNet5 import LeNet5, LeNet5Masked
+from models.VGG import VGG, VGGMasked
 from models.ResNet import ResNet
 from torch import nn, optim
 from torchvision.datasets import MNIST, CIFAR10, ImageNet
@@ -11,6 +11,7 @@ import copy
 import os
 import time
 from utils.index_optimizer import Index_SGD, Index_Adam
+import torch.nn.utils.prune
 
 
 if torch.cuda.is_available():
@@ -24,28 +25,48 @@ def main(args):
     # load dataset
     in_channels, num_classes, dataloader_train, dataloader_test = load_dataset(args.dataset_name)
 
-
     # build neural network
-    if args.model_name == 'LeNet5':
-        model = LeNet5(in_channels=in_channels, num_classes=num_classes).to(device)
-    elif 'VGG' in args.model_name:
-        model = VGG(in_channels=in_channels, num_classes=num_classes).to(device)
-    elif 'ResNet' in args.model_name:
-        model = ResNet(in_channels=in_channels, num_classes=num_classes).to(device)
+    if args.prune:
+        if args.model_name == 'LeNet5':
+            model = LeNet5Masked(in_channels=in_channels, num_classes=num_classes).to(device)
+        elif 'VGG' in args.model_name:
+            model = VGGMasked(in_channels=in_channels, num_classes=num_classes).to(device)
+        elif 'ResNet' in args.model_name:
+            pass
+        else:
+            print('Architecture not supported! Please choose from: LeNet5, VGG and ResNet.')
     else:
-        print('Architecture not supported! Please choose from: LeNet5, VGG and ResNet.')
+        if args.model_name == 'LeNet5':
+            model = LeNet5(in_channels=in_channels, num_classes=num_classes).to(device)
+        elif 'VGG' in args.model_name:
+            model = VGG(in_channels=in_channels, num_classes=num_classes).to(device)
+        elif 'ResNet' in args.model_name:
+            model = ResNet(in_channels=in_channels, num_classes=num_classes).to(device)
+        else:
+            print('Architecture not supported! Please choose from: LeNet5, VGG and ResNet.')
 
     # train
     if args.train_index:
         init_param_path = './checkpoints/init_param_' + args.model_name + '_' + args.dataset_name + '_train_index.pth'
+        final_param_path = './checkpoints/final_param_' + args.model_name + '_' + args.dataset_name + '_train_index.pth'
         # save initial parameters
         torch.save(model.state_dict(), init_param_path)
-        train(model, dataloader_train, dataloader_test, train_index=True)
+        _ = train(model, dataloader_train, dataloader_test, train_index=True, save_path=final_param_path)
     else:
         init_param_path = './checkpoints/init_param_' + args.model_name + '_' + args.dataset_name + '.pth'
+        final_param_path = './checkpoints/final_param_' + args.model_name + '_' + args.dataset_name + '.pth'
         # save initial parameters
         torch.save(model.state_dict(), init_param_path)
-        train(model, dataloader_train, dataloader_test)
+        _ = train(model, dataloader_train, dataloader_test, save_path=final_param_path)
+
+    # prune
+    if args.prune:
+        model.load_state_dict(torch.load(final_param_path))
+        if args.train_index:
+            prune_param_path = './checkpoints/prune_param_' + args.model_name + '_' + args.dataset_name + '_train_index.pth'
+        else:
+            prune_param_path = './checkpoints/prune_param_' + args.model_name + '_' + args.dataset_name + '.pth'
+        prune(model, dataloader_train, dataloader_test, save_path=prune_param_path)
 
 
 def load_dataset(dataset_name, batch_size=64):
@@ -91,12 +112,13 @@ def validate(model, dataloader_test):
 
 
 
-def train(model, dataloader_train, dataloader_test, train_index=False, max_epoch=500, lr=1e-3, patience=20):
+def train(model, dataloader_train, dataloader_test, train_index=False, max_epoch=100, lr=1e-3, patience=15,
+          save_path=None):
     dur = []  # duration for training epochs
     loss_func = nn.CrossEntropyLoss()
     if train_index:
-        optimizer = Index_SGD(model.parameters())
-        #optimizer = Index_Adam(model.parameters())
+        #optimizer = Index_SGD(model.parameters())
+        optimizer = Index_Adam(model.parameters())
     else:
         #optimizer = optim.SGD(model.parameters(), lr=lr)
         optimizer = optim.Adam(model.parameters(), lr=lr)
@@ -127,17 +149,26 @@ def train(model, dataloader_train, dataloader_test, train_index=False, max_epoch
             best_epoch = epoch + 1
             cur_step = 0
             # save checkpoint
-            if train_index:
-                param_after_training_path = './checkpoints/final_param_' + args.model_name + '_' + args.dataset_name + '_train_index.pth'
-            else:
-                param_after_training_path = './checkpoints/final_param_' + args.model_name + '_' + args.dataset_name + '.pth'
-            torch.save(model.state_dict(), param_after_training_path)
+            torch.save(model.state_dict(), save_path)
         else:
             cur_step += 1
             if cur_step == patience:
                 break
     print("Training finished! Best test accuracy = {:.4f}%, corresponding training accuracy = {:.4f}%, "
           "found at Epoch {:05d}.".format(best_test_acc, corresp_train_acc, best_epoch))
+    return best_test_acc
+
+
+def prune(model, dataloader_train, dataloader_test, max_pruning_epoch=1, max_fine_tuning_epoch=50, amount=0.5, save_path=None):
+    l = [module for module in model.modules() if not isinstance(module, nn.Sequential)]
+    for pruning_epoch in range(max_pruning_epoch):
+        for layer in l[1:]:
+            mask = torch.nn.utils.prune.l1_unstructured(layer, 'weight', amount=amount)
+            layer.set_mask(mask.weight_mask)
+        acc_before_fine_tuning = validate(model, dataloader_test)
+        acc_after_fine_tuning = train(model, dataloader_train, dataloader_test, max_epoch=max_fine_tuning_epoch, save_path=save_path)
+        print("Prune Epoch {:05d} | Acc Before Tuning {:.4f}% | Acc After Tuning {:.4f}% "
+              .format(pruning_epoch + 1, acc_before_fine_tuning, acc_after_fine_tuning))
 
 
 if __name__ == '__main__':
@@ -148,6 +179,7 @@ if __name__ == '__main__':
     parser.add_argument('--dataset_name', default='MNIST', help='choose dataset from: MNIST, CIFAR10, ImageNet')
     parser.add_argument('--model_name', default='LeNet5', help='choose architecture from: LeNet5, VGG16, ResNet18')
     parser.add_argument('--train_index', action='store_true', help='if true train index, else train in normal way')
+    parser.add_argument('--prune', action='store_true', help='if or not prune the trained model')
     args = parser.parse_args()
 
     print(args)

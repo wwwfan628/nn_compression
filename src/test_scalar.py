@@ -47,6 +47,13 @@ def main(args):
         torch.save(model.state_dict(), init_param_path)
         train(model, dataloader_train, dataloader_test)
 
+    # process weights & bias in the model
+    for key, weight in model.state_dict().items():
+        if 'weight' in key:
+            weight *= 0.25
+
+    acc = validate(model, dataloader_test)
+
 
 def load_dataset(dataset_name, batch_size=64):
     # load dataset
@@ -91,7 +98,7 @@ def validate(model, dataloader_test):
 
 
 
-def train(model, dataloader_train, dataloader_test, train_index=False, max_epoch=500, lr=1e-3, patience=20):
+def train(model, dataloader_train, dataloader_test, train_index=False, max_epoch=100, lr=1e-3, patience=20):
     dur = []  # duration for training epochs
     loss_func = nn.CrossEntropyLoss()
     if train_index:
