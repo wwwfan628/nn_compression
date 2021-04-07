@@ -1,5 +1,5 @@
 from models.LeNet5 import LeNet5
-from models.VGG import VGG
+from models.VGG import VGG_small
 from models.ResNet import ResNet
 from torch import nn, optim
 from torchvision.datasets import MNIST, CIFAR10, ImageNet

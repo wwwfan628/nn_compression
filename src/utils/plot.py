@@ -7,10 +7,10 @@ import math
 
 def plot_params_distribution(model):
     l = [module for module in model.modules() if isinstance(module, nn.Conv2d) or isinstance(module, nn.Linear)]
-    params_list = [module.weight.clone().detach().flatten().numpy() for module in l[1:]]
+    params_list = [module.weight.clone().detach().flatten().cpu().numpy() for module in l[1:]]
     params_array = np.zeros(0)  # parameters from all layers
     for layer in l[1:]:
-        params_array = np.append(params_array, layer.weight.clone().detach().numpy())
+        params_array = np.append(params_array, layer.weight.clone().detach().cpu().numpy())
 
     n_col = 2
     n_row = math.ceil(len(l)/n_col)
