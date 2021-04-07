@@ -66,7 +66,7 @@ def main(args):
             prune_param_path = './checkpoints/prune_param_' + args.model_name + '_' + args.dataset_name + '_train_index.pth'
         else:
             prune_param_path = './checkpoints/prune_param_' + args.model_name + '_' + args.dataset_name + '.pth'
-        prune(model, dataloader_train, dataloader_test, save_path=prune_param_path)
+        prune(model, dataloader_train, dataloader_test, save_path=prune_param_path, args=args)
 
 
 def load_dataset(dataset_name, batch_size=64):
@@ -159,14 +159,15 @@ def train(model, dataloader_train, dataloader_test, train_index=False, max_epoch
     return best_test_acc
 
 
-def prune(model, dataloader_train, dataloader_test, max_pruning_epoch=1, max_fine_tuning_epoch=50, amount=0.5, save_path=None):
+def prune(model, dataloader_train, dataloader_test, max_pruning_epoch=1, max_fine_tuning_epoch=50, amount=0.5, save_path=None, args=None):
     l = [module for module in model.modules() if not isinstance(module, nn.Sequential)]
     for pruning_epoch in range(max_pruning_epoch):
         for layer in l[1:]:
             mask = torch.nn.utils.prune.l1_unstructured(layer, 'weight', amount=amount)
             layer.set_mask(mask.weight_mask)
         acc_before_fine_tuning = validate(model, dataloader_test)
-        acc_after_fine_tuning = train(model, dataloader_train, dataloader_test, max_epoch=max_fine_tuning_epoch, save_path=save_path)
+        acc_after_fine_tuning = train(model, dataloader_train, dataloader_test, train_index=args.train_index,
+                                      max_epoch=max_fine_tuning_epoch, save_path=save_path)
         print("Prune Epoch {:05d} | Acc Before Tuning {:.4f}% | Acc After Tuning {:.4f}% "
               .format(pruning_epoch + 1, acc_before_fine_tuning, acc_after_fine_tuning))
 
