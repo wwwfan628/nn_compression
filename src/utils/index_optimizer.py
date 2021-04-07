@@ -4,8 +4,7 @@ from ._index_functional import index_sgd, index_adam
 
 
 class Index_SGD(Optimizer):
-    def __init__(self, params, lr=0.4, momentum=0, dampening=0,
-                 weight_decay=0, nesterov=False):
+    def __init__(self, params, lr=0.4, momentum=0, dampening=0, weight_decay=0, nesterov=False):
         if lr < 0.0:
             raise ValueError("Invalid learning rate: {}".format(lr))
         if momentum < 0.0:

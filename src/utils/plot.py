@@ -2,17 +2,18 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch.nn as nn
 import scipy.stats as stats
+import math
 
 
 def plot_params_distribution(model):
-    l = [module for module in model.modules() if not isinstance(module, nn.Sequential)]
+    l = [module for module in model.modules() if isinstance(module, nn.Conv2d) or isinstance(module, nn.Linear)]
     params_list = [module.weight.clone().detach().flatten().numpy() for module in l[1:]]
     params_array = np.zeros(0)  # parameters from all layers
     for layer in l[1:]:
         params_array = np.append(params_array, layer.weight.clone().detach().numpy())
 
-    n_col = 3
-    n_row = int(len(l) / n_col) + 1
+    n_col = 2
+    n_row = math.ceil(len(l)/n_col)
     fig, ax = plt.subplots(figsize=(7 * n_col, 5 * n_row), nrows=n_row, ncols=n_col)
     fig.patch.set_facecolor('w')
     idx = 0

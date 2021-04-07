@@ -1,5 +1,5 @@
 from models.LeNet5 import LeNet5, LeNet5Masked
-from models.VGG import VGG, VGGMasked
+from models.VGG import VGG_small, VGGMasked
 from models.ResNet import ResNet
 from torch import nn, optim
 from torchvision.datasets import MNIST, CIFAR10, ImageNet
@@ -12,6 +12,7 @@ import os
 import time
 from utils.index_optimizer import Index_SGD, Index_Adam
 import torch.nn.utils.prune
+from torchvision import transforms
 
 
 if torch.cuda.is_available():
@@ -23,7 +24,8 @@ else:
 
 def main(args):
     # load dataset
-    in_channels, num_classes, dataloader_train, dataloader_test = load_dataset(args.dataset_name)
+    num_workers, in_channels, num_classes, dataloader_train, dataloader_test = load_dataset(args.dataset_name)
+    torch.set_num_threads(num_workers)
 
     # build neural network
     if args.prune:
@@ -39,7 +41,7 @@ def main(args):
         if args.model_name == 'LeNet5':
             model = LeNet5(in_channels=in_channels, num_classes=num_classes).to(device)
         elif 'VGG' in args.model_name:
-            model = VGG(in_channels=in_channels, num_classes=num_classes).to(device)
+            model = VGG_small(in_channels=in_channels, num_classes=num_classes).to(device)
         elif 'ResNet' in args.model_name:
             model = ResNet(in_channels=in_channels, num_classes=num_classes).to(device)
         else:
@@ -69,16 +71,22 @@ def main(args):
         prune(model, dataloader_train, dataloader_test, save_path=prune_param_path, args=args)
 
 
-def load_dataset(dataset_name, batch_size=64):
+def load_dataset(dataset_name, batch_size=128):
     # load dataset
     if dataset_name == 'MNIST':
-        transform = torchvision.transforms.Compose([torchvision.transforms.ToTensor()])
+        num_workers = 1
+        transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))])
         data_train = MNIST(root='../datasets', train=True, download=True, transform=transform)
         data_test = MNIST(root='../datasets', train=False, download=True, transform=transform)
     elif dataset_name == 'CIFAR10':
-        transform = torchvision.transforms.Compose([torchvision.transforms.ToTensor()])
-        data_train = CIFAR10(root='../datasets', train=True, download=True, transform=transform)
-        data_test = CIFAR10(root='../datasets', train=False, download=True, transform=transform)
+        num_workers = 8
+        transform_train = transforms.Compose([transforms.RandomCrop(32, padding=4), transforms.RandomHorizontalFlip(),
+                                              transforms.ToTensor(),
+                                              transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))])
+        transform_test = transforms.Compose([transforms.ToTensor(),
+                                             transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))])
+        data_train = CIFAR10(root='../datasets', train=True, download=True, transform=transform_train)
+        data_test = CIFAR10(root='../datasets', train=False, download=True, transform=transform_test)
     elif dataset_name == 'ImageNet':
         transform = torchvision.transforms.Compose([torchvision.transforms.Resize(size=[256,480]),
                                                     torchvision.transforms.RandomCrop(size=[224,224]),
@@ -89,9 +97,11 @@ def load_dataset(dataset_name, batch_size=64):
         print('Dataset not supported! Please choose from: MNIST, CIFAR10 and ImageNet.')
     in_channels = data_train[0][0].shape[0]
     num_classes = len(data_train.classes)
-    dataloader_train = torch.utils.data.DataLoader(data_train, batch_size=batch_size, shuffle=True)
-    dataloader_test = torch.utils.data.DataLoader(data_test, batch_size=batch_size)
-    return in_channels, num_classes, dataloader_train, dataloader_test
+    dataloader_train = torch.utils.data.DataLoader(data_train, batch_size=batch_size, shuffle=True, pin_memory=True,
+                                                   num_workers=num_workers)
+    dataloader_test = torch.utils.data.DataLoader(data_test, batch_size=batch_size, shuffle=True, pin_memory=True,
+                                                   num_workers=num_workers)
+    return num_workers, in_channels, num_classes, dataloader_train, dataloader_test
 
 
 
@@ -113,12 +123,12 @@ def validate(model, dataloader_test):
 
 
 def train(model, dataloader_train, dataloader_test, train_index=False, max_epoch=100, lr=1e-3, patience=15,
-          save_path=None):
+          save_path=None, args=None):
     dur = []  # duration for training epochs
     loss_func = nn.CrossEntropyLoss()
     if train_index:
-        #optimizer = Index_SGD(model.parameters())
-        optimizer = Index_Adam(model.parameters())
+        #optimizer = Index_SGD(model.parameters(), lr=1e-2, momentum=0.9)   # for VGG
+        optimizer = Index_Adam(model.parameters())    # for LeNet5
     else:
         #optimizer = optim.SGD(model.parameters(), lr=lr)
         optimizer = optim.Adam(model.parameters(), lr=lr)
@@ -159,8 +169,9 @@ def train(model, dataloader_train, dataloader_test, train_index=False, max_epoch
     return best_test_acc
 
 
-def prune(model, dataloader_train, dataloader_test, max_pruning_epoch=1, max_fine_tuning_epoch=50, amount=0.5, save_path=None, args=None):
-    l = [module for module in model.modules() if not isinstance(module, nn.Sequential)]
+def prune(model, dataloader_train, dataloader_test, max_pruning_epoch=1, max_fine_tuning_epoch=50, amount=0.9,
+          save_path=None, args=None):
+    l = [module for module in model.modules() if isinstance(module, nn.Linear) or isinstance(module, nn.Conv2d)]
     for pruning_epoch in range(max_pruning_epoch):
         for layer in l[1:]:
             mask = torch.nn.utils.prune.l1_unstructured(layer, 'weight', amount=amount)
