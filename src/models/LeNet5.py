@@ -1,6 +1,6 @@
 from torch import nn
 import torch.nn.functional as F
-from ..utils.masked_layers import Conv2dMasked, LinearMasked
+from utils.masked_layers import Conv2dMasked, LinearMasked
 
 class LeNet5(nn.Module):
 	def __init__(self, in_channels=1, num_classes=10, normal_init=True):
