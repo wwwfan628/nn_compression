@@ -11,7 +11,10 @@ import copy
 import os
 import time
 from utils.index_optimizer import Index_SGD, Index_Adam
+from utils.plot import plot_params_distribution
+from torch.utils.tensorboard import SummaryWriter
 
+writer = SummaryWriter()
 
 if torch.cuda.is_available():
     device = torch.device("cuda:0")
@@ -34,6 +37,10 @@ def main(args):
         model = ResNet(in_channels=in_channels, num_classes=num_classes).to(device)
     else:
         print('Architecture not supported! Please choose from: LeNet5, VGG and ResNet.')
+
+    # plot after initialization
+    fig = plot_params_distribution(model)
+    writer.add_figure(tag="Initialization", figure=fig)
 
     # train
     if args.train_index:
@@ -91,12 +98,12 @@ def validate(model, dataloader_test):
 
 
 
-def train(model, dataloader_train, dataloader_test, train_index=False, max_epoch=500, lr=1e-3, patience=20):
+def train(model, dataloader_train, dataloader_test, train_index=False, max_epoch=500, lr=1e-3, patience=10):
     dur = []  # duration for training epochs
     loss_func = nn.CrossEntropyLoss()
     if train_index:
-        optimizer = Index_SGD(model.parameters())
-        #optimizer = Index_Adam(model.parameters())
+        #optimizer = Index_SGD(model.parameters())
+        optimizer = Index_Adam(model.parameters())
     else:
         #optimizer = optim.SGD(model.parameters(), lr=lr)
         optimizer = optim.Adam(model.parameters(), lr=lr)
@@ -120,6 +127,10 @@ def train(model, dataloader_train, dataloader_test, train_index=False, max_epoch
         train_accuracy = float(validate(model, dataloader_train))
         test_accuracy = float(validate(model, dataloader_test))
         print("Epoch {:05d} | Training Acc {:.4f}% | Test Acc {:.4f}% | Time(s) {:.4f}".format(epoch + 1, train_accuracy, test_accuracy, np.mean(dur)))
+        # plot distribution every 10 epochs
+        if epoch % 10 == 0:
+            fig = plot_params_distribution(model)
+            writer.add_figure(tag="Training Epoch: {:03d}".format(epoch+1), figure=fig)
         # early stop
         if test_accuracy > best_test_acc:
             best_test_acc = test_accuracy
