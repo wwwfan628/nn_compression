@@ -137,6 +137,7 @@ def train(model, dataloader_train, dataloader_test, train_index=False, max_epoch
     best_epoch = 0
     cur_step = 0
     for epoch in range(max_epoch):
+        optimizer.param_groups[0]['lr'] *= 0.99
         t0 = time.time()  # start time
         model.train()
         for i, (images, labels) in enumerate(dataloader_train):

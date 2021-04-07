@@ -21,13 +21,13 @@ if torch.cuda.is_available():
     device = torch.device("cuda:0")
 else:
     device = torch.device("cpu")
-    #print("No Cuda Available")
+    print("No Cuda Available")
 
 
 def main(args):
     # load dataset
     num_workers, in_channels, num_classes, dataloader_train, dataloader_test = load_dataset(args.dataset_name)
-    torch.set_num_threads(num_workers)
+    #torch.set_num_threads(num_workers)
 
     # build neural network
     if args.model_name == 'LeNet5':
@@ -82,10 +82,12 @@ def load_dataset(dataset_name, batch_size=128):
         print('Dataset not supported! Please choose from: MNIST, CIFAR10 and ImageNet.')
     in_channels = data_train[0][0].shape[0]
     num_classes = len(data_train.classes)
-    dataloader_train = torch.utils.data.DataLoader(data_train, batch_size=batch_size, shuffle=True, pin_memory=True,
-                                                   num_workers=num_workers)
-    dataloader_test = torch.utils.data.DataLoader(data_test, batch_size=batch_size, shuffle=True, pin_memory=True,
-                                                   num_workers=num_workers)
+    #dataloader_train = torch.utils.data.DataLoader(data_train, batch_size=batch_size, shuffle=True, pin_memory=True,
+    #                                               num_workers=num_workers)
+    dataloader_train = torch.utils.data.DataLoader(data_train, batch_size=batch_size, shuffle=True, pin_memory=True)
+    #dataloader_test = torch.utils.data.DataLoader(data_test, batch_size=batch_size, shuffle=True, pin_memory=True,
+    #                                               num_workers=num_workers)
+    dataloader_test = torch.utils.data.DataLoader(data_test, batch_size=batch_size, shuffle=True, pin_memory=True)
     return num_workers, in_channels, num_classes, dataloader_train, dataloader_test
 
 
