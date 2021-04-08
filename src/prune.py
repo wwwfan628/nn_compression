@@ -174,7 +174,7 @@ def prune(model, dataloader_train, dataloader_test, max_pruning_epoch=1, max_fin
           save_path=None, args=None):
     l = [module for module in model.modules() if isinstance(module, nn.Linear) or isinstance(module, nn.Conv2d)]
     for pruning_epoch in range(max_pruning_epoch):
-        for layer in l[1:]:
+        for layer in l:
             mask = torch.nn.utils.prune.l1_unstructured(layer, 'weight', amount=amount)
             layer.set_mask(mask.weight_mask)
         acc_before_fine_tuning = validate(model, dataloader_test)

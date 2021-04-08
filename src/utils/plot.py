@@ -7,13 +7,13 @@ import math
 
 def plot_params_distribution(model):
     l = [module for module in model.modules() if isinstance(module, nn.Conv2d) or isinstance(module, nn.Linear)]
-    params_list = [module.weight.clone().detach().flatten().cpu().numpy() for module in l[1:]]
+    params_list = [module.weight.clone().detach().flatten().cpu().numpy() for module in l]
     params_array = np.zeros(0)  # parameters from all layers
-    for layer in l[1:]:
+    for layer in l:
         params_array = np.append(params_array, layer.weight.clone().detach().cpu().numpy())
 
-    n_col = 2
-    n_row = math.ceil(len(l)/n_col)
+    n_col = 3
+    n_row = math.ceil((len(l)+1)/n_col)
     fig, ax = plt.subplots(figsize=(7 * n_col, 5 * n_row), nrows=n_row, ncols=n_col)
     fig.patch.set_facecolor('w')
     idx = 0
