@@ -23,7 +23,6 @@ else:
     device = torch.device("cpu")
     print("No Cuda Available")
 
-
 def main(args):
     # load dataset
     num_workers, in_channels, num_classes, dataloader_train, dataloader_test = load_dataset(args.dataset_name)
@@ -109,7 +108,7 @@ def validate(model, dataloader_test):
 
 
 
-def train(model, dataloader_train, dataloader_test, train_index=False, max_epoch=500, lr=1e-3, patience=20):
+def train(model, dataloader_train, dataloader_test, train_index=False, max_epoch=200, lr=1e-3, patience=10):
     dur = []  # duration for training epochs
     loss_func = nn.CrossEntropyLoss()
     if train_index:
@@ -139,13 +138,14 @@ def train(model, dataloader_train, dataloader_test, train_index=False, max_epoch
                 handles = []
                 l = [module for module in model.modules() if isinstance(module, nn.Conv2d) or isinstance(module, nn.Linear)]
                 for layer in l:
-                    handles.append(layer.register_full_backward_hook(plot_grad_output))
+                    handles.append(layer.register_backward_hook(plot_grad_output))
                 pred = model(images)
                 loss = loss_func(pred, labels)
                 loss.backward()
                 for layer in l:
                     fig = plot_tensor_distribution(layer.weight.grad, name=layer.__class__.__name__)
-                    writer.add_figure(tag="Parameter's Gradient Distribution, Training Epoch: {:03d}".format(epoch+1), figure=fig)
+                    writer.add_figure(tag="Parameter's Gradient Distribution, Training Epoch: {:03d} "
+                                      .format(epoch+1)+ str(time.time()), figure=fig)
                 for handle in handles:
                     handle.remove()
         # validate
@@ -183,8 +183,10 @@ def train(model, dataloader_train, dataloader_test, train_index=False, max_epoch
 def plot_grad_output(self, grad_input, grad_output):
     print("layer name: ", self.__class__.__name__)
     print("grad_output size: ", len(grad_output), grad_output[0].shape)
+    # print("grad_input size: ", len(grad_input), grad_input[0].shape)
+    print(" ")
     fig = plot_tensor_distribution(grad_output[0], name=self.__class__.__name__)
-    writer.add_figure(tag="Output's Gradient Distribution", figure=fig)
+    writer.add_figure(tag="Output's Gradient Distribution"+ str(time.time()), figure=fig)
 
 
 
