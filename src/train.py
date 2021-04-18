@@ -11,7 +11,7 @@ import copy
 import os
 import time
 from utils.index_optimizer import Index_SGD, Index_Adam
-from utils.plot import plot_params_distribution
+from utils.plot import plot_params_distribution, plot_tensor_distribution
 from torch.utils.tensorboard import SummaryWriter
 from torchvision import transforms
 
@@ -134,6 +134,20 @@ def train(model, dataloader_train, dataloader_test, train_index=False, max_epoch
             loss = loss_func(pred, labels)
             loss.backward()
             optimizer.step()
+            # plot gradient distribution
+            if epoch % 10 == 0 and i == 0:
+                handles = []
+                l = [module for module in model.modules() if isinstance(module, nn.Conv2d) or isinstance(module, nn.Linear)]
+                for layer in l:
+                    handles.append(layer.register_full_backward_hook(plot_grad_output))
+                pred = model(images)
+                loss = loss_func(pred, labels)
+                loss.backward()
+                for layer in l:
+                    fig = plot_tensor_distribution(layer.weight.grad, name=layer.__class__.__name__)
+                    writer.add_figure(tag="Parameter's Gradient Distribution, Training Epoch: {:03d}".format(epoch+1), figure=fig)
+                for handle in handles:
+                    handle.remove()
         # validate
         dur.append(time.time() - t0)
         train_accuracy = float(validate(model, dataloader_train))
@@ -145,7 +159,7 @@ def train(model, dataloader_train, dataloader_test, train_index=False, max_epoch
         # plot distribution each 10 epochs
         if epoch % 10 == 0:
             fig = plot_params_distribution(model)
-            writer.add_figure(tag="Training Epoch: {:03d}".format(epoch+1), figure=fig)
+            writer.add_figure(tag="Parameter's Distribution, Training Epoch: {:03d}".format(epoch+1), figure=fig)
         # early stop
         if test_accuracy > best_test_acc:
             best_test_acc = test_accuracy
@@ -164,6 +178,15 @@ def train(model, dataloader_train, dataloader_test, train_index=False, max_epoch
                 break
     print("Training finished! Best test accuracy = {:.4f}%, corresponding training accuracy = {:.4f}%, "
           "found at Epoch {:05d}.".format(best_test_acc, corresp_train_acc, best_epoch))
+
+
+def plot_grad_output(self, grad_input, grad_output):
+    print("layer name: ", self.__class__.__name__)
+    print("grad_output size: ", len(grad_output), grad_output[0].shape)
+    fig = plot_tensor_distribution(grad_output[0], name=self.__class__.__name__)
+    writer.add_figure(tag="Output's Gradient Distribution", figure=fig)
+
+
 
 
 if __name__ == '__main__':

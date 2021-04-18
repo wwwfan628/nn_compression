@@ -43,3 +43,18 @@ def plot_params_distribution(model):
                 break
     return fig
 
+
+
+def plot_tensor_distribution(tensor, name):
+    elements = tensor.clone().detach().flatten().cpu().numpy()
+    fig, ax = plt.subplots(figsize=(7, 5), nrows=1, ncols=1)
+    fig.patch.set_facecolor('w')
+    ax.grid(linestyle='dotted')
+    ax.set_facecolor('whitesmoke')
+    bin_edges = np.histogram(elements, bins=50)[1]
+    ax.hist(elements, bins=50, edgecolor='steelblue', density=True, stacked=True)
+    loc, std = stats.norm.fit(elements)
+    ax.plot(bin_edges, stats.norm.pdf(bin_edges, loc=loc, scale=std))
+    ax.legend(['pdf', 'normalized frequency'])
+    ax.title.set_text(name)
+    return fig
