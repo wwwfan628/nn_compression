@@ -15,6 +15,6 @@
 # exit on errors
 set -o errexit
 # execute python file
-python try.py --dataset_name=MNIST --model_name=LeNet5 --train_index
+python try2.py --dataset_name=MNIST --model_name=LeNet5
 echo finished at: `date`
 exit 0;
