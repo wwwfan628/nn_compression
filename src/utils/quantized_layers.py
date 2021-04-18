@@ -1,6 +1,6 @@
 import torch.nn as nn
 import torch.nn.functional as F
-from straight_through_estimator import ste_function
+from utils.straight_through_estimator import ste_function
 
 
 class LinearQuantized(nn.Linear):
