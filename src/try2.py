@@ -42,7 +42,7 @@ def main(args):
         l = [module for module in model.modules() if isinstance(module, nn.Conv2d) or isinstance(module, nn.Linear)]
         for layer in l:
             #prune_weight_interval(layer.weight)
-            prune_weight_abs(layer.weight, amount=0.95)
+            prune_weight_abs(layer.weight, amount=0.9)
             layer.set_init_weight(layer.weight)
 
     # train
