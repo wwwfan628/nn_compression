@@ -11,10 +11,38 @@ import copy
 import os
 import time
 from utils.index_optimizer import Index_SGD, Index_Adam
-from utils.plot import plot_params_distribution, plot_tensor_distribution
+from utils.plot import plot_params_distribution, plot_tensor_distribution, plot_distribution, plot_dict
 from torch.utils.tensorboard import SummaryWriter
 from torchvision import transforms
 
+# used for hook
+Call_forward_hook_times = 0
+Call_backward_hook_times = 0
+Model_name = None
+Model_depth = 0
+LeNet5_layer_names = ['Layer1:CNN','Layer1:CNN ReLu',
+                     'Layer2:CNN','Layer2:CNN ReLu',
+                     'Layer3:Linear','Layer3:Linear ReLu',
+                     'Layer4:Linear']
+LeNet5_param = {key:[] for i,key in enumerate(LeNet5_layer_names) if i%2==0}
+LeNet5_param_grad = {key:[] for i,key in enumerate(LeNet5_layer_names) if i%2==0}
+LeNet5_layer_out = {key:[] for key in LeNet5_layer_names}
+LeNet5_layer_out_grad = {key:[] for key in LeNet5_layer_names}
+VGG_layer_names = ['Layer1:CNN','Layer1:CNN ReLu',
+                   'Layer2:CNN','Layer2:CNN ReLu',
+                   'Layer3:CNN','Layer3:CNN ReLu',
+                   'Layer4:CNN','Layer4:CNN ReLu',
+                   'Layer5:CNN','Layer5:CNN ReLu',
+                   'Layer6:CNN','Layer6:CNN ReLu',
+                   'Layer7:Linear','Layer7:Linear ReLu',
+                   'Layer8:Linear','Layer8:Linear ReLu',
+                   'Layer9:Linear']
+VGG_param = {key:[] for i,key in enumerate(VGG_layer_names) if i%2==0}
+VGG_param_grad = {key:[] for i,key in enumerate(VGG_layer_names) if i%2==0}
+VGG_layer_out = {key:[] for key in VGG_layer_names}
+VGG_layer_out_grad = {key:[] for key in VGG_layer_names}
+
+# tensorboard
 writer = SummaryWriter()
 
 if torch.cuda.is_available():
@@ -24,14 +52,27 @@ else:
     print("No Cuda Available")
 
 def main(args):
-    # load dataset
-    num_workers, in_channels, num_classes, dataloader_train, dataloader_test = load_dataset(args.dataset_name)
-    #torch.set_num_threads(num_workers)
 
+    # check whether outputs & checkpoints directory exist
+    path = os.path.join(os.getcwd(), '../outputs')
+    if not os.path.exists(path):
+        os.makedirs(path)
+    path = os.path.join(os.getcwd(), '../checkpoints')
+    if not os.path.exists(path):
+        os.makedirs(path)
+
+    # load dataset
+    in_channels, num_classes, dataloader_train, dataloader_test = load_dataset(args.dataset_name)
+
+    global Model_name, Model_depth
     # build neural network
     if args.model_name == 'LeNet5':
+        Model_name = 'LeNet5'
+        Model_depth = len(LeNet5_layer_names)
         model = LeNet5(in_channels=in_channels, num_classes=num_classes).to(device)
     elif 'VGG' in args.model_name:
+        Model_name = 'VGG'
+        Model_depth = len(VGG_layer_names)
         model = VGG_small(in_channels=in_channels, num_classes=num_classes).to(device)
     elif 'ResNet' in args.model_name:
         model = ResNet(in_channels=in_channels, num_classes=num_classes).to(device)
@@ -39,8 +80,19 @@ def main(args):
         print('Architecture not supported! Please choose from: LeNet5, VGG and ResNet.')
 
     # plot after initialization
-    fig = plot_params_distribution(model)
-    writer.add_figure(tag="Initialization", figure=fig)
+    l = [module for module in model.modules() if
+         isinstance(module, nn.ReLU) or isinstance(module, nn.Conv2d) or isinstance(module, nn.Linear)]
+    for layer_idx, layer in enumerate(l):
+        if layer_idx % 2 == 0:
+            if Model_name == 'LeNet5':
+                LeNet5_param[LeNet5_layer_names[layer_idx]].append(layer.weight)
+            elif 'VGG' in Model_name:
+                VGG_param[VGG_layer_names[layer_idx]].append(layer.weight)
+    if Model_name == 'LeNet5':
+        param_fig = plot_dict(LeNet5_param)
+    elif 'VGG' in Model_name:
+        param_fig =plot_dict(VGG_param)
+    writer.add_figure(tag="Distribution of Parameter, Initilization", figure=param_fig)
 
     # train
     if args.train_index:
@@ -58,12 +110,10 @@ def main(args):
 def load_dataset(dataset_name, batch_size=128):
     # load dataset
     if dataset_name == 'MNIST':
-        num_workers = 1
         transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))])
         data_train = MNIST(root='../datasets', train=True, download=True, transform=transform)
         data_test = MNIST(root='../datasets', train=False, download=True, transform=transform)
     elif dataset_name == 'CIFAR10':
-        num_workers = 8
         transform_train = transforms.Compose([transforms.RandomCrop(32, padding=4), transforms.RandomHorizontalFlip(),
                                               transforms.ToTensor(),
                                               transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))])
@@ -81,13 +131,9 @@ def load_dataset(dataset_name, batch_size=128):
         print('Dataset not supported! Please choose from: MNIST, CIFAR10 and ImageNet.')
     in_channels = data_train[0][0].shape[0]
     num_classes = len(data_train.classes)
-    #dataloader_train = torch.utils.data.DataLoader(data_train, batch_size=batch_size, shuffle=True, pin_memory=True,
-    #                                               num_workers=num_workers)
     dataloader_train = torch.utils.data.DataLoader(data_train, batch_size=batch_size, shuffle=True, pin_memory=True)
-    #dataloader_test = torch.utils.data.DataLoader(data_test, batch_size=batch_size, shuffle=True, pin_memory=True,
-    #                                               num_workers=num_workers)
     dataloader_test = torch.utils.data.DataLoader(data_test, batch_size=batch_size, shuffle=True, pin_memory=True)
-    return num_workers, in_channels, num_classes, dataloader_train, dataloader_test
+    return in_channels, num_classes, dataloader_train, dataloader_test
 
 
 
@@ -100,7 +146,7 @@ def validate(model, dataloader_test):
         for i, (images, labels) in enumerate(dataloader_test):
             images = images.to(device)
             x = model(images)
-            value, pred = torch.max(x, 1)
+            _, pred = torch.max(x, 1)
             pred = pred.data.cpu()
             total += x.size(0)
             correct += torch.sum(pred == labels)
@@ -125,6 +171,27 @@ def train(model, dataloader_train, dataloader_test, train_index=False, max_epoch
         optimizer.param_groups[0]['lr'] *= 0.99
         t0 = time.time()  # start time
         model.train()
+        # add hook function to every layer
+        if epoch % 10 == 0:
+            # clear dict to save new values
+            if Model_name == 'LeNet5':
+                global LeNet5_param, LeNet5_param_grad, LeNet5_layer_out, LeNet5_layer_out_grad
+                LeNet5_param = {key: [] for i, key in enumerate(LeNet5_layer_names) if i % 2 == 0}
+                LeNet5_param_grad = {key: [] for i, key in enumerate(LeNet5_layer_names) if i % 2 == 0}
+                LeNet5_layer_out = {key: [] for key in LeNet5_layer_names}
+                LeNet5_layer_out_grad = {key: [] for key in LeNet5_layer_names}
+            elif 'VGG' in Model_name:
+                global VGG_param, VGG_param_grad, VGG_layer_out, VGG_layer_out_grad
+                VGG_param = {key: [] for i, key in enumerate(VGG_layer_names) if i % 2 == 0}
+                VGG_param_grad = {key: [] for i, key in enumerate(VGG_layer_names) if i % 2 == 0}
+                VGG_layer_out = {key: [] for key in VGG_layer_names}
+                VGG_layer_out_grad = {key: [] for key in VGG_layer_names}
+            l = [module for module in model.modules() if
+                 isinstance(module, nn.ReLU) or isinstance(module, nn.Conv2d) or isinstance(module, nn.Linear)]
+            handles = []
+            for layer in l:
+                handles.append(layer.register_forward_hook(save_layer_output))
+                handles.append(layer.register_backward_hook(save_grad_output))
         for i, (images, labels) in enumerate(dataloader_train):
             images = images.to(device)
             labels = labels.to(device)
@@ -133,21 +200,34 @@ def train(model, dataloader_train, dataloader_test, train_index=False, max_epoch
             loss = loss_func(pred, labels)
             loss.backward()
             optimizer.step()
-            # plot gradient distribution
-            if epoch % 10 == 0 and i == 0:
-                handles = []
-                l = [module for module in model.modules() if isinstance(module, nn.Conv2d) or isinstance(module, nn.Linear)]
-                for layer in l:
-                    handles.append(layer.register_backward_hook(plot_grad_output))
-                pred = model(images)
-                loss = loss_func(pred, labels)
-                loss.backward()
-                for layer in l:
-                    fig = plot_tensor_distribution(layer.weight.grad, name=layer.__class__.__name__)
-                    writer.add_figure(tag="Parameter's Gradient Distribution, Training Epoch: {:03d} "
-                                      .format(epoch+1)+ str(time.time()), figure=fig)
-                for handle in handles:
-                    handle.remove()
+            # save parameter's gradient per 10 epochs
+            if epoch % 10 == 0:
+                for layer_idx, layer in enumerate(l):
+                    if layer_idx % 2 == 0:
+                        if Model_name == 'LeNet5':
+                            LeNet5_param_grad[LeNet5_layer_names[layer_idx]].append(layer.weight.grad)
+                        elif 'VGG' in Model_name:
+                            VGG_param_grad[VGG_layer_names[layer_idx]].append(layer.weight.grad)
+        # plot distribution each 10 epochs
+        if epoch % 10 == 0:
+            for layer_idx, layer in enumerate(l):
+                if layer_idx % 2 == 0:
+                    if Model_name == 'LeNet5':
+                        LeNet5_param[LeNet5_layer_names[layer_idx]].append(layer.weight)
+                    elif 'VGG' in Model_name:
+                        VGG_param[VGG_layer_names[layer_idx]].append(layer.weight)
+            if Model_name == 'LeNet5':
+                param_fig, param_grad_fig, layer_out_fig, layer_out_grad_fig = \
+                    plot_distribution(LeNet5_param, LeNet5_param_grad, LeNet5_layer_out, LeNet5_layer_out_grad)
+            elif 'VGG' in Model_name:
+                param_fig, param_grad_fig, layer_out_fig, layer_out_grad_fig = \
+                    plot_distribution(VGG_param, VGG_param_grad, VGG_layer_out, VGG_layer_out_grad)
+            writer.add_figure(tag="Distribution of Parameter, Training Epoch: {:03d}".format(epoch + 1), figure=param_fig)
+            writer.add_figure(tag="Distribution of Parameter Gradient, Training Epoch: {:03d}".format(epoch + 1), figure=param_grad_fig)
+            writer.add_figure(tag="Distribution of Layer Output, Training Epoch: {:03d}".format(epoch + 1), figure=layer_out_fig)
+            writer.add_figure(tag="Distribution of Layer Output Gradient, Training Epoch: {:03d}".format(epoch + 1), figure=layer_out_grad_fig)
+            for handle in handles:  # remove hooks
+                handle.remove()
         # validate
         dur.append(time.time() - t0)
         train_accuracy = float(validate(model, dataloader_train))
@@ -156,10 +236,6 @@ def train(model, dataloader_train, dataloader_test, train_index=False, max_epoch
         # plot accuracy
         writer.add_scalar('Train Accuracy', train_accuracy, epoch)
         writer.add_scalar('Test Accuracy', test_accuracy, epoch)
-        # plot distribution each 10 epochs
-        if epoch % 10 == 0:
-            fig = plot_params_distribution(model)
-            writer.add_figure(tag="Parameter's Distribution, Training Epoch: {:03d}".format(epoch+1), figure=fig)
         # early stop
         if test_accuracy > best_test_acc:
             best_test_acc = test_accuracy
@@ -168,10 +244,10 @@ def train(model, dataloader_train, dataloader_test, train_index=False, max_epoch
             cur_step = 0
             # save checkpoint
             if train_index:
-                param_after_training_path = './checkpoints/final_param_' + args.model_name + '_' + args.dataset_name + '_train_index.pth'
+                final_param_path = './checkpoints/final_param_' + args.model_name + '_' + args.dataset_name + '_train_index.pth'
             else:
-                param_after_training_path = './checkpoints/final_param_' + args.model_name + '_' + args.dataset_name + '.pth'
-            torch.save(model.state_dict(), param_after_training_path)
+                final_param_path = './checkpoints/final_param_' + args.model_name + '_' + args.dataset_name + '.pth'
+            torch.save(model.state_dict(), final_param_path)
         else:
             cur_step += 1
             if cur_step == patience:
@@ -180,15 +256,33 @@ def train(model, dataloader_train, dataloader_test, train_index=False, max_epoch
           "found at Epoch {:05d}.".format(best_test_acc, corresp_train_acc, best_epoch))
 
 
-def plot_grad_output(self, grad_input, grad_output):
-    print("layer name: ", self.__class__.__name__)
-    print("grad_output size: ", len(grad_output), grad_output[0].shape)
-    # print("grad_input size: ", len(grad_input), grad_input[0].shape)
-    print(" ")
-    fig = plot_tensor_distribution(grad_output[0], name=self.__class__.__name__)
-    writer.add_figure(tag="Output's Gradient Distribution"+ str(time.time()), figure=fig)
+def save_grad_output(self, grad_input, grad_output):
+    global Call_backward_hook_times
+    layer_idx = - ((Call_backward_hook_times % Model_depth)+1)
+    if Model_name == 'LeNet5':
+        layer_name = LeNet5_layer_names[layer_idx]
+        LeNet5_layer_out_grad[layer_name].append(grad_output[0])
+    elif 'VGG' in Model_name:
+        layer_name = VGG_layer_names[layer_idx]
+        VGG_layer_out_grad[layer_name].append(grad_output[0])
+    #print("BACKWARD HOOK")
+    #print("layer name: ", self.__class__.__name__)
+    #print("grad_output size: ", len(grad_output), grad_output[0].shape)
+    Call_backward_hook_times += 1
 
-
+def save_layer_output(self, input, output):
+    global Call_forward_hook_times
+    layer_idx = Call_forward_hook_times % Model_depth
+    if Model_name == 'LeNet5':
+        layer_name = LeNet5_layer_names[layer_idx]
+        LeNet5_layer_out[layer_name].append(output)
+    elif 'VGG' in Model_name:
+        layer_name = VGG_layer_names[layer_idx]
+        VGG_layer_out[layer_name].append(output)
+    #print("FORWARD HOOK")
+    #print("layer name: ", self.__class__.__name__)
+    #print("output size: ", len(output), output.shape)
+    Call_forward_hook_times+=1
 
 
 if __name__ == '__main__':
