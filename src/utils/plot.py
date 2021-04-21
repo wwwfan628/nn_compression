@@ -6,12 +6,12 @@ import math
 import torch
 
 def plot_distribution(param_dict, param_grad_dict, layer_out_dict, layer_out_grad_dict):
-    #param_fig = plot_dict(param_dict)
-    #param_grad_fig = plot_dict(param_grad_dict)
+    param_fig = plot_dict(param_dict)
+    param_grad_fig = plot_dict(param_grad_dict)
     layer_out_fig = plot_dict(layer_out_dict)
     layer_out_grad_fig = plot_dict(layer_out_grad_dict)
-    #return param_fig, param_grad_fig, layer_out_fig, layer_out_grad_fig
-    return None, None, layer_out_fig, layer_out_grad_fig
+    return param_fig, param_grad_fig, layer_out_fig, layer_out_grad_fig
+    #return None, None, layer_out_fig, layer_out_grad_fig
 
 def plot_dict(dict):
     layer_names = []
