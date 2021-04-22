@@ -54,10 +54,10 @@ else:
 def main(args):
 
     # check whether outputs & checkpoints directory exist
-    path = os.path.join(os.getcwd(), '../outputs')
+    path = os.path.join(os.getcwd(), './outputs')
     if not os.path.exists(path):
         os.makedirs(path)
-    path = os.path.join(os.getcwd(), '../checkpoints')
+    path = os.path.join(os.getcwd(), './checkpoints')
     if not os.path.exists(path):
         os.makedirs(path)
 
