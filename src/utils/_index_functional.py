@@ -124,10 +124,10 @@ def index_adam(params: List[Tensor], grads: List[Tensor], exp_avgs: List[Tensor]
 
 @torch.no_grad()
 def reorder_largest_k(param_new, param_orig):
-    largest_k_idx_new = torch.ones(len(param_new), dtype=int) * len(param_orig)
+    largest_k_idx_new = torch.ones(len(param_new), dtype=int).to(device) * len(param_orig)
     for i in range(len(param_new)):
         # create matrix for param_new & param_orig
-        param_new_i = torch.ones(len(param_orig)) * param_new[i]
+        param_new_i = torch.ones(len(param_orig)).to(device) * param_new[i]
         diff_abs_i = (param_new_i - param_orig).abs()
         min_idx_i = torch.argmin(diff_abs_i)
         largest_k_idx_new[i] = min_idx_i
