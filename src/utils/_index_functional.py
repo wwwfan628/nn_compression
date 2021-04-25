@@ -4,6 +4,11 @@ import torch
 from torch import Tensor
 from .bipartite_matching import bipartite_perfect_matching
 
+if torch.cuda.is_available():
+    device = torch.device("cuda:0")
+else:
+    device = torch.device("cpu")
+
 
 def index_sgd(params: List[Tensor], d_p_list: List[Tensor], momentum_buffer_list: List[Optional[Tensor]],
               weight_decay: float, momentum: float, lr: float, dampening: float, nesterov: bool, weighted_reconstruction: bool):
@@ -33,9 +38,25 @@ def index_sgd(params: List[Tensor], d_p_list: List[Tensor], momentum_buffer_list
 
         #param.add_(d_p, alpha=-lr)  # sgd, from pytorch original code
         if weighted_reconstruction:
+            # create mask
+            k = min(int(len(param.view(-1)) * 0.05), 10)
+            largest_k_idx = torch.topk(d_p_list[i].view(-1), k=k)[1]
+            largest_k_mask = torch.zeros(len(param.view(-1))).to(device)
+            largest_k_mask.scatter_(0, largest_k_idx, 1.)
+            sort_mask = (1 - largest_k_mask).bool()
+            # compute new weight values
             param_new = param.add(d_p, alpha=-lr)
-            sequence = bipartite_perfect_matching(param_new.data.view(-1), param.data.view(-1), d_p_list[i].data.view(-1).abs())
-            param.view(-1)[:] = param.view(-1)[sequence]
+            # find matching for the largest k weights
+            largest_k_idx_new = reorder_largest_k(param_new.view(-1)[largest_k_idx], param.view(-1))
+            param_copy = param.clone().detach()
+            param.view(-1)[largest_k_idx] = param_copy.view(-1)[largest_k_idx_new]
+            # create mask, delete those parameters which have been used in last step
+            largest_k_mask_new = torch.zeros(len(param.view(-1))).to(device)
+            largest_k_mask_new.scatter_(0, largest_k_idx_new, 1.)
+            sort_mask_new = (1 - largest_k_mask_new).bool()
+            # sort the rest weight
+            param_sort_tmp, _ = torch.sort(param.view(-1)[sort_mask_new])
+            param.view(-1)[sort_mask][torch.argsort(param_new.view(-1)[sort_mask])] = param_sort_tmp
         else:
             param_new = param.add(d_p, alpha=-lr)
             param_tmp, _ = torch.sort(param.view(-1))
@@ -74,12 +95,41 @@ def index_adam(params: List[Tensor], grads: List[Tensor], exp_avgs: List[Tensor]
             denom = (exp_avg_sq.sqrt() / math.sqrt(bias_correction2)).add_(eps)
 
         step_size = lr / bias_correction1
-        #param.addcdiv_(exp_avg, denom, value=-step_size)   # adam, from pytorch original code
+        # param.addcdiv_(exp_avg, denom, value=-step_size)   # adam, from pytorch original code
         if weighted_reconstruction:
+            # create mask
+            k = min(int(len(param.view(-1))*0.05), 10)
+            largest_k_idx = torch.topk(grads[i].view(-1), k=k)[1]
+            largest_k_mask = torch.zeros(len(param.view(-1))).to(device)
+            largest_k_mask.scatter_(0, largest_k_idx, 1.)
+            sort_mask = (1 - largest_k_mask).bool()
+            # compute new weight values
             param_new = param.addcdiv(exp_avg, denom, value=-step_size)
-            sequence = bipartite_perfect_matching(param_new.data.view(-1), param.data.view(-1), grads[i].data.view(-1).abs())
-            param.view(-1)[:] = param.view(-1)[sequence]
+            # find matching for the largest k weights
+            largest_k_idx_new = reorder_largest_k(param_new.clone().detach().view(-1)[largest_k_idx], param.clone().detach().view(-1))
+            param_copy = param.clone().detach()
+            param.view(-1)[largest_k_idx] = param_copy.view(-1)[largest_k_idx_new]
+            # create mask, delete those parameters which have been used in last step
+            largest_k_mask_new = torch.zeros(len(param.view(-1))).to(device)
+            largest_k_mask_new.scatter_(0, largest_k_idx_new, 1.)
+            sort_mask_new = (1 - largest_k_mask_new).bool()
+            # sort the rest weight
+            param_sort_tmp, _ = torch.sort(param.view(-1)[sort_mask_new])
+            param.view(-1)[sort_mask][torch.argsort(param_new.view(-1)[sort_mask])] = param_sort_tmp
         else:
             param_new = param.addcdiv(exp_avg, denom, value=-step_size)
             param_tmp, _ = torch.sort(param.view(-1))
             param.view(-1)[torch.argsort(param_new.view(-1))] = param_tmp
+
+
+@torch.no_grad()
+def reorder_largest_k(param_new, param_orig):
+    largest_k_idx_new = torch.ones(len(param_new), dtype=int) * len(param_orig)
+    for i in range(len(param_new)):
+        # create matrix for param_new & param_orig
+        param_new_i = torch.ones(len(param_orig)) * param_new[i]
+        diff_abs_i = (param_new_i - param_orig).abs()
+        min_idx_i = torch.argmin(diff_abs_i)
+        largest_k_idx_new[i] = min_idx_i
+        param_orig[min_idx_i] = float('inf')
+    return largest_k_idx_new
