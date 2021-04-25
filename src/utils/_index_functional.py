@@ -47,7 +47,7 @@ def index_sgd(params: List[Tensor], d_p_list: List[Tensor], momentum_buffer_list
             # compute new weight values
             param_new = param.add(d_p, alpha=-lr)
             # find matching for the largest k weights
-            largest_k_idx_new = reorder_largest_k(param_new.view(-1)[largest_k_idx], param.view(-1))
+            largest_k_idx_new = reorder_largest_k(param_new.clone().detach().view(-1)[largest_k_idx], param.clone().detach().view(-1))
             param_copy = param.clone().detach()
             param.view(-1)[largest_k_idx] = param_copy.view(-1)[largest_k_idx_new]
             # create mask, delete those parameters which have been used in last step
