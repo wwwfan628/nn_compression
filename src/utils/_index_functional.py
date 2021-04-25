@@ -39,11 +39,11 @@ def index_sgd(params: List[Tensor], d_p_list: List[Tensor], momentum_buffer_list
         #param.add_(d_p, alpha=-lr)  # sgd, from pytorch original code
         if weighted_reconstruction:
             # create mask
-            k = min(int(len(param.view(-1)) * 0.05), 10)
+            k = min(int(len(param.view(-1)) * 0.05), 0)
+            all_idx = torch.arange(len(param.view(-1))).to(device)
             largest_k_idx = torch.topk(d_p_list[i].view(-1), k=k)[1]
-            largest_k_mask = torch.zeros(len(param.view(-1))).to(device)
-            largest_k_mask.scatter_(0, largest_k_idx, 1.)
-            sort_mask = (1 - largest_k_mask).bool()
+            sort_idx = torch.tensor(list(set(all_idx.clone().detach().cpu().numpy()).difference(
+                set(largest_k_idx.clone().detach().cpu().numpy())))).to(device)
             # compute new weight values
             param_new = param.add(d_p, alpha=-lr)
             # find matching for the largest k weights
@@ -51,12 +51,11 @@ def index_sgd(params: List[Tensor], d_p_list: List[Tensor], momentum_buffer_list
             param_copy = param.clone().detach()
             param.view(-1)[largest_k_idx] = param_copy.view(-1)[largest_k_idx_new]
             # create mask, delete those parameters which have been used in last step
-            largest_k_mask_new = torch.zeros(len(param.view(-1))).to(device)
-            largest_k_mask_new.scatter_(0, largest_k_idx_new, 1.)
-            sort_mask_new = (1 - largest_k_mask_new).bool()
+            sort_idx_new = torch.tensor(list(set(all_idx.clone().detach().cpu().numpy()).difference(
+                set(largest_k_idx_new.clone().detach().cpu().numpy())))).to(device)
             # sort the rest weight
-            param_sort_tmp, _ = torch.sort(param.view(-1)[sort_mask_new])
-            param.view(-1)[sort_mask][torch.argsort(param_new.view(-1)[sort_mask])] = param_sort_tmp
+            param_sort_tmp, _ = torch.sort(param.view(-1)[sort_idx_new])
+            param.view(-1)[sort_idx[torch.argsort(param_new.view(-1)[sort_idx])]] = param_sort_tmp
         else:
             param_new = param.add(d_p, alpha=-lr)
             param_tmp, _ = torch.sort(param.view(-1))
@@ -98,11 +97,14 @@ def index_adam(params: List[Tensor], grads: List[Tensor], exp_avgs: List[Tensor]
         # param.addcdiv_(exp_avg, denom, value=-step_size)   # adam, from pytorch original code
         if weighted_reconstruction:
             # create mask
-            k = min(int(len(param.view(-1))*0.05), 10)
+            k = min(int(len(param.view(-1))*0.05), 50)
+            all_idx = torch.arange(len(param.view(-1))).to(device)
             largest_k_idx = torch.topk(grads[i].view(-1), k=k)[1]
-            largest_k_mask = torch.zeros(len(param.view(-1))).to(device)
-            largest_k_mask.scatter_(0, largest_k_idx, 1.)
-            sort_mask = (1 - largest_k_mask).bool()
+            #combined = torch.cat((all_idx, largest_k_idx))
+            #uniques, counts = combined.unique(return_counts=True)
+            #sort_idx = uniques[counts == 1]
+            sort_idx = torch.tensor(list(set(all_idx.clone().detach().cpu().numpy()).difference(
+                set(largest_k_idx.clone().detach().cpu().numpy())))).to(device)
             # compute new weight values
             param_new = param.addcdiv(exp_avg, denom, value=-step_size)
             # find matching for the largest k weights
@@ -110,12 +112,14 @@ def index_adam(params: List[Tensor], grads: List[Tensor], exp_avgs: List[Tensor]
             param_copy = param.clone().detach()
             param.view(-1)[largest_k_idx] = param_copy.view(-1)[largest_k_idx_new]
             # create mask, delete those parameters which have been used in last step
-            largest_k_mask_new = torch.zeros(len(param.view(-1))).to(device)
-            largest_k_mask_new.scatter_(0, largest_k_idx_new, 1.)
-            sort_mask_new = (1 - largest_k_mask_new).bool()
+            #combined = torch.cat((all_idx, largest_k_idx_new))
+            #uniques, counts = combined.unique(return_counts=True)
+            #sort_idx_new = uniques[counts == 1]
+            sort_idx_new = torch.tensor(list(set(all_idx.clone().detach().cpu().numpy()).difference(
+                set(largest_k_idx_new.clone().detach().cpu().numpy())))).to(device)
             # sort the rest weight
-            param_sort_tmp, _ = torch.sort(param.view(-1)[sort_mask_new])
-            param.view(-1)[sort_mask][torch.argsort(param_new.view(-1)[sort_mask])] = param_sort_tmp
+            param_sort_tmp, _ = torch.sort(param.view(-1)[sort_idx_new])
+            param.view(-1)[sort_idx[torch.argsort(param_new.view(-1)[sort_idx])]] = param_sort_tmp
         else:
             param_new = param.addcdiv(exp_avg, denom, value=-step_size)
             param_tmp, _ = torch.sort(param.view(-1))
