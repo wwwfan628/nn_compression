@@ -107,8 +107,8 @@ def train(model, dataloader_train, dataloader_test, train_index=False, max_epoch
     dur = []  # duration for training epochs
     loss_func = nn.CrossEntropyLoss()
     if train_index:
-        optimizer = Index_SGD(model.parameters(), lr=1e-1, momentum=0.9, weight_reconstruction_error=weighted_reconstruction)
-        # optimizer = Index_Adam(model.parameters(), weight_reconstruction_error=weighted_reconstruction)
+        optimizer = Index_SGD(model.parameters(), lr=1e-1, momentum=0.9, weighted_reconstruction=weighted_reconstruction)
+        # optimizer = Index_Adam(model.parameters(), weighted_reconstruction=weighted_reconstruction)
     else:
         #optimizer = optim.SGD(model.parameters(), lr=lr)
         optimizer = optim.Adam(model.parameters(), lr=lr)

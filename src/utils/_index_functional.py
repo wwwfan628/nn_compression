@@ -6,7 +6,7 @@ from .bipartite_matching import bipartite_perfect_matching
 
 
 def index_sgd(params: List[Tensor], d_p_list: List[Tensor], momentum_buffer_list: List[Optional[Tensor]],
-              weight_decay: float, momentum: float, lr: float, dampening: float, nesterov: bool, weight_reconstruction_error: bool):
+              weight_decay: float, momentum: float, lr: float, dampening: float, nesterov: bool, weighted_reconstruction: bool):
     """
     Functional API that performs Index SGD algorithm computation.
     """
@@ -32,7 +32,7 @@ def index_sgd(params: List[Tensor], d_p_list: List[Tensor], momentum_buffer_list
                 d_p = buf
 
         #param.add_(d_p, alpha=-lr)  # sgd, from pytorch original code
-        if weight_reconstruction_error:
+        if weighted_reconstruction:
             param_new = param.add(d_p, alpha=-lr)
             sequence = bipartite_perfect_matching(param_new.data.view(-1), param.data.view(-1), d_p_list[i].data.view(-1).abs())
             param.view(-1)[:] = param.view(-1)[sequence]
@@ -44,7 +44,7 @@ def index_sgd(params: List[Tensor], d_p_list: List[Tensor], momentum_buffer_list
 
 def index_adam(params: List[Tensor], grads: List[Tensor], exp_avgs: List[Tensor], exp_avg_sqs: List[Tensor],
          max_exp_avg_sqs: List[Tensor], state_steps: List[int], amsgrad: bool, beta1: float, beta2: float, lr: float,
-         weight_decay: float, eps: float, weight_reconstruction_error: bool):
+         weight_decay: float, eps: float, weighted_reconstruction: bool):
     """
     Functional API that performs Adam algorithm computation.
     """
@@ -75,7 +75,7 @@ def index_adam(params: List[Tensor], grads: List[Tensor], exp_avgs: List[Tensor]
 
         step_size = lr / bias_correction1
         #param.addcdiv_(exp_avg, denom, value=-step_size)   # adam, from pytorch original code
-        if weight_reconstruction_error:
+        if weighted_reconstruction:
             param_new = param.addcdiv(exp_avg, denom, value=-step_size)
             sequence = bipartite_perfect_matching(param_new.data.view(-1), param.data.view(-1), grads[i].data.view(-1).abs())
             param.view(-1)[:] = param.view(-1)[sequence]
