@@ -39,12 +39,17 @@ class LeNet5_masked(nn.Module):
 
 
 class LeNet5_quantized(nn.Module):
-	def __init__(self, in_channels=1, num_classes=10, normal_init=True):
+	def __init__(self, in_channels=1, num_classes=10, normal_init=True, small=False, extra_small=False):
 		super(LeNet5_quantized, self).__init__()
-		self.features = nn.Sequential(Conv2dQuantized(in_channels, 20, 5, 1), nn.MaxPool2d(2, 2), nn.ReLU(inplace=True),
-									  Conv2dQuantized(20, 50, 5, 1), nn.MaxPool2d(2, 2), nn.ReLU(inplace=True))
-		self.classifier = nn.Sequential(LinearQuantized(4 * 4 * 50, 500), nn.ReLU(inplace=True),
-										LinearQuantized(500, num_classes))
+		self.features = nn.Sequential(Conv2dQuantized(in_channels, 20, 5, 1, small=small, extra_small=extra_small),
+									  nn.MaxPool2d(2, 2),
+									  nn.ReLU(inplace=True),
+									  Conv2dQuantized(20, 50, 5, 1, small=small, extra_small=extra_small),
+									  nn.MaxPool2d(2, 2),
+									  nn.ReLU(inplace=True))
+		self.classifier = nn.Sequential(LinearQuantized(4 * 4 * 50, 500, small=small),
+										nn.ReLU(inplace=True),
+										LinearQuantized(500, num_classes, small=small))
 		if normal_init:
 			for m in self.modules():
 				if isinstance(m, nn.Linear) or isinstance(m, nn.Conv2d):

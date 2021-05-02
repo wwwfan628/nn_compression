@@ -152,10 +152,10 @@ class Index_Adam(Optimizer):
                     state_steps.append(state['step'])
 
             beta1, beta2 = group['betas']
-            #index_adam(params_with_grad, grads, exp_avgs, exp_avg_sqs, max_exp_avg_sqs, state_steps, group['amsgrad'],
-                   #beta1, beta2, group['lr'], group['weight_decay'], group['eps'])
-            index_adam_small_range(params_with_grad, grads, exp_avgs, exp_avg_sqs, max_exp_avg_sqs, state_steps, group['amsgrad'],
-                   beta1, beta2, group['lr'], group['weight_decay'], group['eps'], False)
+            index_adam(params_with_grad, grads, exp_avgs, exp_avg_sqs, max_exp_avg_sqs, state_steps, group['amsgrad'],
+                   beta1, beta2, group['lr'], group['weight_decay'], group['eps'])
+            #index_adam_small_range(params_with_grad, grads, exp_avgs, exp_avg_sqs, max_exp_avg_sqs, state_steps, group['amsgrad'],
+                   #beta1, beta2, group['lr'], group['weight_decay'], group['eps'], False)
         return loss
 
 

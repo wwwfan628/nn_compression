@@ -29,7 +29,7 @@ def main(args):
 
     # build neural network
     if args.model_name == 'LeNet5':
-        model = LeNet5_quantized(in_channels=in_channels, num_classes=num_classes).to(device)
+        model = LeNet5_quantized(in_channels=in_channels, num_classes=num_classes, small=False, extra_small=False).to(device)
     elif 'VGG' in args.model_name:
         model = VGG_small_quantized(in_channels=in_channels, num_classes=num_classes).to(device)
     elif 'ResNet' in args.model_name:
@@ -107,15 +107,15 @@ def validate(model, dataloader_test):
 
 
 
-def train(model, dataloader_train, dataloader_test, train_index=False, max_epoch=500, lr=1e-3, patience=20):
+def train(model, dataloader_train, dataloader_test, train_index=False, max_epoch=200, lr=1e-3, patience=20):
     dur = []  # duration for training epochs
     loss_func = nn.CrossEntropyLoss()
     if train_index:
-        optimizer = Index_SGD(model.parameters(), lr=1e-1, momentum=0.9)
-        #optimizer = Index_Adam(model.parameters())
+        # optimizer = Index_SGD(model.parameters(), lr=1e-1, momentum=0.9)
+        optimizer = Index_Adam(model.parameters(), lr=1e-1)
     else:
         #optimizer = optim.SGD(model.parameters(), lr=lr)
-        optimizer = optim.Adam(model.parameters(), lr=lr)
+        optimizer = optim.Adam(model.parameters(), lr=1e-1)
     best_test_acc = 0
     corresp_train_acc = 0
     best_epoch = 0
