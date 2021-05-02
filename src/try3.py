@@ -10,7 +10,7 @@ import argparse
 import copy
 import os
 import time
-from utils.index_optimizer import Index_SGD, Index_Adam
+from utils.index_optimizer import Index_SGD_weighted, Index_Adam_weighted
 from utils.prune_weight import prune_weight_interval, prune_weight_abs
 from torchvision import transforms
 
@@ -107,8 +107,8 @@ def train(model, dataloader_train, dataloader_test, train_index=False, max_epoch
     dur = []  # duration for training epochs
     loss_func = nn.CrossEntropyLoss()
     if train_index:
-        optimizer = Index_SGD(model.parameters(), lr=1e-1, momentum=0.9, weighted_reconstruction=weighted_reconstruction)
-        # optimizer = Index_Adam(model.parameters(), weighted_reconstruction=weighted_reconstruction)
+        optimizer = Index_SGD_weighted(model.parameters(), lr=1e-1, momentum=0.9, weighted_reconstruction=weighted_reconstruction)
+        # optimizer = Index_Adam_weighted(model.parameters(), weighted_reconstruction=weighted_reconstruction)
     else:
         #optimizer = optim.SGD(model.parameters(), lr=lr)
         optimizer = optim.Adam(model.parameters(), lr=lr)
