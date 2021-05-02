@@ -81,7 +81,7 @@ def index_adam(params: List[Tensor], grads: List[Tensor], exp_avgs: List[Tensor]
 
 
 def index_sgd_small_range(params: List[Tensor], d_p_list: List[Tensor], momentum_buffer_list: List[Optional[Tensor]],
-              weight_decay: float, momentum: float, lr: float, dampening: float, nesterov: bool):
+              weight_decay: float, momentum: float, lr: float, dampening: float, nesterov: bool, extra_small: bool):
     """
     Functional API that performs Index SGD algorithm computation.
     """
@@ -108,7 +108,12 @@ def index_sgd_small_range(params: List[Tensor], d_p_list: List[Tensor], momentum
 
         #param.add_(d_p, alpha=-lr)  # sgd, from pytorch original code
         param_new = param.add(d_p, alpha=-lr)
-        if len(param.shape) > 1:    # weight
+        if extra_small and len(param.shape) > 2:  # Conv2D weight
+            for idx_dim0, param_dim0 in enumerate(param):
+                for idx_dim1, param_dim1 in enumerate(param_dim0):
+                    param_dim1_tmp, _ = torch.sort(param_dim1.view(-1))
+                    param_dim1.view(-1)[torch.argsort(param_new[idx_dim0, idx_dim1].view(-1))] = param_dim1_tmp
+        elif len(param.shape) > 1:    # weight
             for idx_dim0, param_dim0 in enumerate(param):
                 param_dim0_tmp, _ = torch.sort(param_dim0.view(-1))
                 param_dim0.view(-1)[torch.argsort(param_new[idx_dim0].view(-1))] = param_dim0_tmp
@@ -119,7 +124,7 @@ def index_sgd_small_range(params: List[Tensor], d_p_list: List[Tensor], momentum
 
 def index_adam_small_range(params: List[Tensor], grads: List[Tensor], exp_avgs: List[Tensor], exp_avg_sqs: List[Tensor],
          max_exp_avg_sqs: List[Tensor], state_steps: List[int], amsgrad: bool, beta1: float, beta2: float, lr: float,
-         weight_decay: float, eps: float):
+         weight_decay: float, eps: float, extra_small: bool):
     """
     Functional API that performs Adam algorithm computation.
     """
@@ -151,7 +156,12 @@ def index_adam_small_range(params: List[Tensor], grads: List[Tensor], exp_avgs: 
         step_size = lr / bias_correction1
         # param.addcdiv_(exp_avg, denom, value=-step_size)   # adam, from pytorch original code
         param_new = param.addcdiv(exp_avg, denom, value=-step_size)
-        if len(param.shape) > 1:    # weight
+        if extra_small and len(param.shape) > 2:  # Conv2D weight
+            for idx_dim0, param_dim0 in enumerate(param):
+                for idx_dim1, param_dim1 in enumerate(param_dim0):
+                    param_dim1_tmp, _ = torch.sort(param_dim1.view(-1))
+                    param_dim1.view(-1)[torch.argsort(param_new[idx_dim0, idx_dim1].view(-1))] = param_dim1_tmp
+        elif len(param.shape) > 1:    # weight
             for idx_dim0, param_dim0 in enumerate(param):
                 param_dim0_tmp, _ = torch.sort(param_dim0.view(-1))
                 param_dim0.view(-1)[torch.argsort(param_new[idx_dim0].view(-1))] = param_dim0_tmp

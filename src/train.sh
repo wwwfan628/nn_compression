@@ -5,7 +5,7 @@
 #SBATCH --error=./%j.err                  # where to store error messages
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=1
-#SBATCH --mem=64G
+#SBATCH --mem=8G
 
 /bin/echo Running on host: `hostname`
 /bin/echo In directory: `pwd`
@@ -15,6 +15,6 @@
 # exit on errors
 set -o errexit
 # execute python file
-python train.py --dataset_name=MNIST --model_name=LeNet5
+python train.py --dataset_name=MNIST --model_name=LeNet5 --train_index
 echo finished at: `date`
 exit 0;
