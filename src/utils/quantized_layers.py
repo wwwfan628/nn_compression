@@ -1,20 +1,26 @@
 import torch.nn as nn
 import torch.nn.functional as F
 from utils.straight_through_estimator import ste_function, ste_function_small, ste_function_extra_small
+import torch
+
+if torch.cuda.is_available():
+    device = torch.device("cuda:0")
+else:
+    device = torch.device("cpu")
 
 
 class LinearQuantized(nn.Linear):
     def __init__(self, in_features, out_features, bias=True, small=False):
         super(LinearQuantized, self).__init__(in_features, out_features, bias)
-        self.init_weight = self.weight.clone().detach()
-        self.init_bias = self.bias.clone().detach()
+        self.init_weight = self.weight.clone().detach().to(device)
+        self.init_bias = self.bias.clone().detach().to(device)
         self.small = small
 
     def set_init_weight(self, init_weight):
-        self.init_weight = init_weight.clone().detach()
+        self.init_weight = init_weight.clone().detach().to(device)
 
     def set_init_bias(self, init_bias):
-        self.init_bias = init_bias.clone().detach()
+        self.init_bias = init_bias.clone().detach().to(device)
 
     def forward(self, x):
         if self.small:
@@ -32,16 +38,16 @@ class Conv2dQuantized(nn.Conv2d):
                  small=False, extra_small=False):
         super(Conv2dQuantized, self).__init__(in_channels, out_channels, kernel_size, stride, padding, dilation, groups,
                                            bias)
-        self.init_weight = self.weight.clone().detach()
-        self.init_bias = self.bias.clone().detach()
+        self.init_weight = self.weight.clone().detach().to(device)
+        self.init_bias = self.bias.clone().detach().to(device)
         self.small = small
         self.extra_small = extra_small
 
     def set_init_weight(self, init_weight):
-        self.init_weight = init_weight.clone().detach()
+        self.init_weight = init_weight.clone().detach().to(device)
 
     def set_init_bias(self, init_bias):
-        self.init_bias = init_bias.clone().detach()
+        self.init_bias = init_bias.clone().detach().to(device)
 
     def forward(self, x):
         if self.extra_small:
