@@ -29,7 +29,7 @@ def main(args):
 
     # build neural network
     if args.model_name == 'LeNet5':
-        model = LeNet5_quantized(in_channels=in_channels, num_classes=num_classes, small=False, extra_small=False).to(device)
+        model = LeNet5_quantized(in_channels=in_channels, num_classes=num_classes, normal_init=True, small=False, extra_small=False).to(device)
     elif 'VGG' in args.model_name:
         model = VGG_small_quantized(in_channels=in_channels, num_classes=num_classes).to(device)
     elif 'ResNet' in args.model_name:
