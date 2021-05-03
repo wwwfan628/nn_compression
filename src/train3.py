@@ -25,13 +25,12 @@ else:
 def main(args):
     # load dataset
     num_workers, in_channels, num_classes, dataloader_train, dataloader_test = load_dataset(args.dataset_name)
-    #torch.set_num_threads(num_workers)
 
     # build neural network
     if args.model_name == 'LeNet5':
         model = LeNet5_quantized(in_channels=in_channels, num_classes=num_classes, normal_init=True, small=False, extra_small=False).to(device)
     elif 'VGG' in args.model_name:
-        model = VGG_small_quantized(in_channels=in_channels, num_classes=num_classes).to(device)
+        model = VGG_small_quantized(in_channels=in_channels, num_classes=num_classes, normal_init=True, small=False, extra_small=False).to(device)
     elif 'ResNet' in args.model_name:
         model = ResNet(in_channels=in_channels, num_classes=num_classes).to(device)
     else:
@@ -106,8 +105,8 @@ def train(model, dataloader_train, dataloader_test, train_index=False, max_epoch
         # optimizer = Index_SGD(model.parameters(), lr=1e-1, momentum=0.9)
         optimizer = Index_Adam(model.parameters(), lr=1e-1)
     else:
-        #optimizer = optim.SGD(model.parameters(), lr=lr)
-        optimizer = optim.Adam(model.parameters(), lr=1e-2)
+        optimizer = optim.SGD(model.parameters(), lr=1e-2, momentum=0.9)
+        # optimizer = optim.Adam(model.parameters(), lr=1e-2)
     best_test_acc = 0
     corresp_train_acc = 0
     best_epoch = 0
