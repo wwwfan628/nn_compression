@@ -1,8 +1,7 @@
 from models.LeNet5 import LeNet5
 from models.VGG import VGG_small
-from models.ResNet import ResNet
 from torch import nn, optim
-from torchvision.datasets import MNIST, CIFAR10, ImageNet
+from torchvision.datasets import MNIST, CIFAR10
 import torch
 import torchvision
 import numpy as np
@@ -52,12 +51,8 @@ else:
     print("No Cuda Available")
 
 def main(args):
-
-    # check whether outputs & checkpoints directory exist
-    path = os.path.join(os.getcwd(), '../outputs')
-    if not os.path.exists(path):
-        os.makedirs(path)
-    path = os.path.join(os.getcwd(), '../checkpoints')
+    # check whether checkpoints directory exist
+    path = os.path.join(os.getcwd(), './checkpoints')
     if not os.path.exists(path):
         os.makedirs(path)
 
@@ -74,8 +69,6 @@ def main(args):
         Model_name = 'VGG'
         Model_depth = len(VGG_layer_names)
         model = VGG_small(in_channels=in_channels, num_classes=num_classes).to(device)
-    elif 'ResNet' in args.model_name:
-        model = ResNet(in_channels=in_channels, num_classes=num_classes).to(device)
     else:
         print('Architecture not supported! Please choose from: LeNet5, VGG and ResNet.')
 
@@ -97,23 +90,22 @@ def main(args):
     # train
     if args.train_index:
         init_param_path = './checkpoints/init_param_' + args.model_name + '_' + args.dataset_name + '_train_index.pth'
-        # save initial parameters
-        torch.save(model.state_dict(), init_param_path)
-        train(model, dataloader_train, dataloader_test, train_index=True)
     else:
         init_param_path = './checkpoints/init_param_' + args.model_name + '_' + args.dataset_name + '.pth'
-        # save initial parameters
-        torch.save(model.state_dict(), init_param_path)
-        train(model, dataloader_train, dataloader_test)
+    # save initial parameters
+    torch.save(model.state_dict(), init_param_path)
+    train(model, dataloader_train, dataloader_test, args)
 
 
-def load_dataset(dataset_name, batch_size=128):
+def load_dataset(dataset_name):
     # load dataset
     if dataset_name == 'MNIST':
+        batch_size = 128
         transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))])
         data_train = MNIST(root='../datasets', train=True, download=True, transform=transform)
         data_test = MNIST(root='../datasets', train=False, download=True, transform=transform)
     elif dataset_name == 'CIFAR10':
+        batch_size = 128
         transform_train = transforms.Compose([transforms.RandomCrop(32, padding=4), transforms.RandomHorizontalFlip(),
                                               transforms.ToTensor(),
                                               transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))])
@@ -121,14 +113,8 @@ def load_dataset(dataset_name, batch_size=128):
                                              transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))])
         data_train = CIFAR10(root='../datasets', train=True, download=True, transform=transform_train)
         data_test = CIFAR10(root='../datasets', train=False, download=True, transform=transform_test)
-    elif dataset_name == 'ImageNet':
-        transform = torchvision.transforms.Compose([torchvision.transforms.Resize(size=[256,480]),
-                                                    torchvision.transforms.RandomCrop(size=[224,224]),
-                                                    torchvision.transforms.ToTensor()])
-        data_train = torchvision.datasets.ImageFolder('../datasets/ImageNet/train', transform=transform)
-        data_test = torchvision.datasets.ImageFolder('../datasets/ImageNet/val', transform=transform)
     else:
-        print('Dataset not supported! Please choose from: MNIST, CIFAR10 and ImageNet.')
+        print('Dataset not supported! Please choose from: MNIST, CIFAR10.')
     in_channels = data_train[0][0].shape[0]
     num_classes = len(data_train.classes)
     dataloader_train = torch.utils.data.DataLoader(data_train, batch_size=batch_size, shuffle=True, pin_memory=True)
@@ -154,20 +140,22 @@ def validate(model, dataloader_test):
 
 
 
-def train(model, dataloader_train, dataloader_test, train_index=False, max_epoch=200, lr=1e-3, patience=10):
+def train(model, dataloader_train, dataloader_test, args):
     dur = []  # duration for training epochs
     loss_func = nn.CrossEntropyLoss()
-    if train_index:
-        #optimizer = Index_SGD(model.parameters(), lr=1e-2, momentum=0.9)  # for VGG
-        optimizer = Index_Adam(model.parameters())   # for LeNet5
+    if args.train_index:
+        if 'LeNet' in args.model_name:
+            optimizer = Index_Adam(model.parameters(), lr=1e-3)  # for LeNet5
+        elif 'VGG' in args.model_name:
+            optimizer = Index_SGD(model.parameters(), lr=1e-2, momentum=0.9)  # for VGG
     else:
-        #optimizer = optim.SGD(model.parameters(), lr=lr)
-        optimizer = optim.Adam(model.parameters(), lr=lr)
+        #optimizer = optim.SGD(model.parameters(), lr=args.lr)
+        optimizer = optim.Adam(model.parameters(), lr=args.lr)
     best_test_acc = 0
     corresp_train_acc = 0
     best_epoch = 0
     cur_step = 0
-    for epoch in range(max_epoch):
+    for epoch in range(args.max_epoch):
         optimizer.param_groups[0]['lr'] *= 0.99
         t0 = time.time()  # start time
         model.train()
@@ -247,14 +235,14 @@ def train(model, dataloader_train, dataloader_test, train_index=False, max_epoch
             best_epoch = epoch + 1
             cur_step = 0
             # save checkpoint
-            if train_index:
+            if args.train_index:
                 final_param_path = './checkpoints/final_param_' + args.model_name + '_' + args.dataset_name + '_train_index.pth'
             else:
                 final_param_path = './checkpoints/final_param_' + args.model_name + '_' + args.dataset_name + '.pth'
             torch.save(model.state_dict(), final_param_path)
         else:
             cur_step += 1
-            if cur_step == patience:
+            if cur_step == args.patience:
                 break
     print("Training finished! Best test accuracy = {:.4f}%, corresponding training accuracy = {:.4f}%, "
           "found at Epoch {:05d}.".format(best_test_acc, corresp_train_acc, best_epoch))
@@ -294,9 +282,12 @@ if __name__ == '__main__':
     # get parameters
     parser = argparse.ArgumentParser(description="Fixed Point")
 
-    parser.add_argument('--dataset_name', default='MNIST', help='choose dataset from: MNIST, CIFAR10, ImageNet')
-    parser.add_argument('--model_name', default='LeNet5', help='choose architecture from: LeNet5, VGG, ResNet18')
+    parser.add_argument('--dataset_name', default='MNIST', help='choose dataset from: MNIST, CIFAR10')
+    parser.add_argument('--model_name', default='LeNet5', help='choose architecture from: LeNet5, VGG')
     parser.add_argument('--train_index', action='store_true', help='if true train index, else train in normal way')
+    parser.add_argument('--max_epoch', type=int, default=250, help='max training epoch')
+    parser.add_argument('--lr', type=float, default=1e-3, help='learning rate of optimizer')
+    parser.add_argument('--patience', type=int, default=20, help='patience for early stop')
     args = parser.parse_args()
 
     print(args)
