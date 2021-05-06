@@ -15,6 +15,6 @@
 # exit on errors
 set -o errexit
 # execute python file
-python train3.py --dataset_name=CIFAR10 --model_name=VGG
+python train.py --dataset_name=ImageNet --model_name=ResNet18 --train_index
 echo finished at: `date`
 exit 0;
