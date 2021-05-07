@@ -34,7 +34,7 @@ def main(args):
     elif args.dataset_name == 'CIFAR10':
         num_threads = 8
     else:
-        num_threads = 32
+        num_threads = 8
     torch.set_num_threads(num_threads)
 
     # load dataset
