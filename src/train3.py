@@ -2,7 +2,7 @@ from models.LeNet5 import LeNet5_quantized
 from models.VGG import VGG_small_quantized
 from models.ResNet import ResNet_quantized
 from torch import nn, optim
-from torchvision.datasets import MNIST, CIFAR10, ImageNet
+from torchvision.datasets import MNIST, CIFAR10, ImageNet, ImageFolder
 import torch
 import torchvision
 import numpy as np
@@ -86,8 +86,8 @@ def load_dataset(dataset_name):
                                         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])])
         transform_val = transforms.Compose([transforms.Resize(256), transforms.CenterCrop(224), transforms.ToTensor(),
                                             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])])
-        data_train = ImageNet(root='/srv/beegfs01/projects/imagenet/data/', split='train', transform=transform_train)
-        data_test = ImageNet(root='/srv/beegfs01/projects/imagenet/data/', split='val', transform=transform_val)
+        data_train = ImageFolder(root='/srv/beegfs01/projects/imagenet/data/train/', transform=transform_train)
+        data_test = ImageFolder(root='/srv/beegfs01/projects/imagenet/data/val/', transform=transform_val)
     else:
         print('Dataset is not supported! Please choose from: MNIST, CIFAR10 and ImageNet.')
     in_channels = data_train[0][0].shape[0]
