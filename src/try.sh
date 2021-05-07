@@ -3,9 +3,9 @@
 #SBATCH --mail-type=ALL                   # mail configuration: NONE, BEGIN, END, FAIL, REQUEUE, ALL
 #SBATCH --output=./%j.out                 # where to store the output ( %j is the JOBID )
 #SBATCH --error=./%j.err                  # where to store error messages
-#SBATCH --gres=gpu:2
-#SBATCH --cpus-per-task=1
-#SBATCH --mem=8G
+#SBATCH --gres=gpu:4
+#SBATCH --cpus-per-task=16
+#SBATCH --mem=64G
 
 /bin/echo Running on host: `hostname`
 /bin/echo In directory: `pwd`
