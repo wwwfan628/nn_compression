@@ -5,7 +5,7 @@
 #SBATCH --error=./%j.err                  # where to store error messages
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=1
-#SBATCH --mem=64G
+#SBATCH --mem=8G
 
 /bin/echo Running on host: `hostname`
 /bin/echo In directory: `pwd`
@@ -15,6 +15,6 @@
 # exit on errors
 set -o errexit
 # execute python file
-python imagenet_test.py
+python imagenet_test2.py
 echo finished at: `date`
 exit 0;
