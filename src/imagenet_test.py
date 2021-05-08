@@ -157,7 +157,7 @@ if __name__ == '__main__':
     torch.set_num_threads(num_threads)
 
     num_workers = 8
-    batch_size = 128
+    batch_size = 1
     transform_train = transforms.Compose([transforms.RandomResizedCrop(224), transforms.RandomHorizontalFlip(),
                                           transforms.ToTensor(),
                                           transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])])
@@ -172,7 +172,8 @@ if __name__ == '__main__':
                                                   num_workers=num_workers)
     for i, (images, labels, paths) in enumerate(dataloader_train):
         print(paths)
+        print('\n')
     for i, (images, labels, paths) in enumerate(dataloader_test):
         print(paths)
-
+        print('\n')
     print("Finish!")
