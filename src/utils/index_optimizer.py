@@ -56,8 +56,8 @@ class Index_SGD(Optimizer):
                     else:
                         momentum_buffer_list.append(state['momentum_buffer'])
 
-            # index_sgd(params_with_grad, d_p_list, momentum_buffer_list, weight_decay, momentum, lr, dampening, nesterov)
-            index_sgd_small_range(params_with_grad, d_p_list, momentum_buffer_list, weight_decay, momentum, lr, dampening, nesterov, False)
+            index_sgd(params_with_grad, d_p_list, momentum_buffer_list, weight_decay, momentum, lr, dampening, nesterov)
+            # index_sgd_small_range(params_with_grad, d_p_list, momentum_buffer_list, weight_decay, momentum, lr, dampening, nesterov, False)
 
             # update momentum_buffers in state
             for p, momentum_buffer in zip(params_with_grad, momentum_buffer_list):
@@ -154,7 +154,7 @@ class Index_Adam(Optimizer):
             beta1, beta2 = group['betas']
             index_adam(params_with_grad, grads, exp_avgs, exp_avg_sqs, max_exp_avg_sqs, state_steps, group['amsgrad'],
                    beta1, beta2, group['lr'], group['weight_decay'], group['eps'])
-            #index_adam_small_range(params_with_grad, grads, exp_avgs, exp_avg_sqs, max_exp_avg_sqs, state_steps, group['amsgrad'],
+            # index_adam_small_range(params_with_grad, grads, exp_avgs, exp_avg_sqs, max_exp_avg_sqs, state_steps, group['amsgrad'],
                    #beta1, beta2, group['lr'], group['weight_decay'], group['eps'], False)
         return loss
 
