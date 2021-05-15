@@ -3,10 +3,8 @@ from models.VGG import VGG_small
 from torch import nn, optim
 from torchvision.datasets import MNIST, CIFAR10
 import torch
-import torchvision
 import numpy as np
 import argparse
-import copy
 import os
 import time
 from utils.index_optimizer import Index_SGD, Index_Adam
@@ -280,7 +278,7 @@ def save_layer_output(self, input, output):
 if __name__ == '__main__':
 
     # get parameters
-    parser = argparse.ArgumentParser(description="Fixed Point")
+    parser = argparse.ArgumentParser(description="Traditional Training Plotting")
 
     parser.add_argument('--dataset_name', default='MNIST', help='choose dataset from: MNIST, CIFAR10')
     parser.add_argument('--model_name', default='LeNet5', help='choose architecture from: LeNet5, VGG')

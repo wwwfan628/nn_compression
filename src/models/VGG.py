@@ -108,39 +108,39 @@ class VGG_small_quantized(nn.Module):
     '''
     VGG model
     '''
-    def __init__(self, in_channels=3, num_classes=1000, normal_init=True, small=False, extra_small=False):
+    def __init__(self, in_channels=3, num_classes=1000, normal_init=True, granularity_channel=False, granularity_kernel=False):
         super(VGG_small_quantized, self).__init__()
         self.features = nn.Sequential(
-            Conv2dQuantized(in_channels=in_channels, out_channels=128, kernel_size=3, padding=1, small=small, extra_small=extra_small),
+            Conv2dQuantized(in_channels=in_channels, out_channels=128, kernel_size=3, padding=1, granularity_channel=granularity_channel, granularity_kernel=granularity_kernel),
             nn.BatchNorm2d(num_features=128, affine=True, momentum=0.1),
             nn.ReLU(inplace=True),
-            Conv2dQuantized(in_channels=128, out_channels=128, kernel_size=3, padding=1, small=small, extra_small=extra_small),
+            Conv2dQuantized(in_channels=128, out_channels=128, kernel_size=3, padding=1, granularity_channel=granularity_channel, granularity_kernel=granularity_kernel),
             nn.BatchNorm2d(num_features=128, affine=True, momentum=0.1),
             nn.ReLU(inplace=True),
             nn.MaxPool2d(kernel_size=2, stride=2),
-            Conv2dQuantized(in_channels=128, out_channels=256, kernel_size=3, padding=1, small=small, extra_small=extra_small),
+            Conv2dQuantized(in_channels=128, out_channels=256, kernel_size=3, padding=1, granularity_channel=granularity_channel, granularity_kernel=granularity_kernel),
             nn.BatchNorm2d(num_features=256, affine=True, momentum=0.1),
             nn.ReLU(inplace=True),
-            Conv2dQuantized(in_channels=256, out_channels=256, kernel_size=3, padding=1, small=small, extra_small=extra_small),
+            Conv2dQuantized(in_channels=256, out_channels=256, kernel_size=3, padding=1, granularity_channel=granularity_channel, granularity_kernel=granularity_kernel),
             nn.BatchNorm2d(num_features=256, affine=True, momentum=0.1),
             nn.ReLU(inplace=True),
             nn.MaxPool2d(kernel_size=2, stride=2),
-            Conv2dQuantized(in_channels=256, out_channels=512, kernel_size=3, padding=1, small=small, extra_small=extra_small),
+            Conv2dQuantized(in_channels=256, out_channels=512, kernel_size=3, padding=1, granularity_channel=granularity_channel, granularity_kernel=granularity_kernel),
             nn.BatchNorm2d(num_features=512, affine=True, momentum=0.1),
             nn.ReLU(inplace=True),
-            Conv2dQuantized(in_channels=512, out_channels=512, kernel_size=3, padding=1, small=small, extra_small=extra_small),
+            Conv2dQuantized(in_channels=512, out_channels=512, kernel_size=3, padding=1, granularity_channel=granularity_channel, granularity_kernel=granularity_kernel),
             nn.BatchNorm2d(num_features=512, affine=True, momentum=0.1),
             nn.ReLU(inplace=True),
             nn.MaxPool2d(kernel_size=2, stride=2)
         )
         self.classifier = nn.Sequential(
-            LinearQuantized(512 * 4 * 4, 1024, small=small),
+            LinearQuantized(512 * 4 * 4, 1024, granularity_channel=granularity_channel),
             nn.BatchNorm1d(num_features=1024, affine=True, momentum=0.1),
             nn.ReLU(inplace=True),
-            LinearQuantized(1024, 1024, small=small),
+            LinearQuantized(1024, 1024, granularity_channel=granularity_channel),
             nn.BatchNorm1d(num_features=1024, affine=True, momentum=0.1),
             nn.ReLU(inplace=True),
-            LinearQuantized(1024, num_classes, small=small)
+            LinearQuantized(1024, num_classes, granularity_channel=granularity_channel)
         )
         if normal_init:
             for m in self.modules():

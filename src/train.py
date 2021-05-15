@@ -4,19 +4,13 @@ from models.ResNet import ResNet
 from torch import nn, optim
 from torchvision.datasets import MNIST, CIFAR10, ImageNet, ImageFolder
 import torch
-import torchvision
 import numpy as np
 import argparse
-import copy
 import os
 import time
-from utils.index_optimizer import Index_SGD, Index_Adam
-from utils.plot import plot_params_distribution
-from torch.utils.tensorboard import SummaryWriter
+from utils.index_optimizer import Index_Adam_full, Index_SGD_full
 from torchvision import transforms
 
-## tensorboard
-#writer = SummaryWriter()
 
 if torch.cuda.is_available():
     device = torch.device("cuda:0")
@@ -52,10 +46,6 @@ def main(args):
         model = ResNet(ResNet_type=args.model_name, image_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
     else:
         print('Architecture not supported! Please choose from: LeNet5, VGG and ResNet.')
-
-    ## plot after initialization
-    #fig = plot_params_distribution(model)
-    #writer.add_figure(tag="Distribution of Parameter, Initilization", figure=fig)
 
     # train
     if args.train_index:
@@ -127,11 +117,18 @@ def train(model, dataloader_train, dataloader_test, args):
     loss_func = nn.CrossEntropyLoss()
     if args.train_index:
         if 'LeNet' in args.model_name:
-            optimizer = Index_Adam(model.parameters(), lr=1e-3)  # for LeNet5
+            optimizer = Index_Adam_full(model.parameters(), lr=1e-3, ste=args.ste, params_prime=model.parameters(),
+                                        granularity_channel=args.granularity_channel,
+                                        granularity_kernel=args.granularity_kernel)  # for LeNet5
         elif 'VGG' in args.model_name:
-            optimizer = Index_SGD(model.parameters(), lr=1e-2, momentum=0.9)  # for VGG
+            optimizer = Index_SGD_full(model.parameters(), lr=1e-2, momentum=0.9, ste=args.ste,
+                                       params_prime=model.parameters(), granularity_channel=args.granularity_channel,
+                                       granularity_kernel=args.granularity_kernel)  # for VGG
         else:
-            optimizer = Index_SGD(model.parameters(), lr=0.4, nesterov=True, momentum=0.9, weight_decay=1e-4)
+            optimizer = Index_SGD_full(model.parameters(), lr=0.4, nesterov=True, momentum=0.9, weight_decay=1e-4,
+                                       ste=args.ste, params_prime=model.parameters(),
+                                       granularity_channel=args.granularity_channel,
+                                       granularity_kernel=args.granularity_kernel)
     else:
         #optimizer = optim.SGD(model.parameters(), lr=args.lr)
         optimizer = optim.Adam(model.parameters(), lr=args.lr)
@@ -158,18 +155,13 @@ def train(model, dataloader_train, dataloader_test, args):
             loss = loss_func(pred, labels)
             loss.backward()
             optimizer.step()
-        ## plot distribution each 10 epochs
-        #if epoch % 10 == 0:
-        #    fig = plot_params_distribution(model)
-        #    writer.add_figure(tag="Distribution of Parameter, Training Epoch: {:03d}".format(epoch + 1), figure=fig)
+
         # validate
         dur.append(time.time() - t0)
         train_accuracy = float(validate(model, dataloader_train))
         test_accuracy = float(validate(model, dataloader_test))
         print("Epoch {:05d} | Training Acc {:.4f}% | Test Acc {:.4f}% | Time(s) {:.4f}".format(epoch + 1, train_accuracy, test_accuracy, np.mean(dur)))
-        ## plot accuracy
-        #writer.add_scalar('Train Accuracy', train_accuracy, epoch)
-        #writer.add_scalar('Test Accuracy', test_accuracy, epoch)
+
         # early stop
         if test_accuracy > best_test_acc:
             best_test_acc = test_accuracy
@@ -202,6 +194,9 @@ if __name__ == '__main__':
     parser.add_argument('--max_epoch', type=int, default=250, help='max training epoch')
     parser.add_argument('--lr', type=float, default=1e-3, help='learning rate of optimizer')
     parser.add_argument('--patience', type=int, default=20, help='patience for early stop')
+    parser.add_argument('--ste', action='store_true', help='if use straight through estimation or not')
+    parser.add_argument('--granularity_channel', action='store_true', help='if true, update index inside one channel')
+    parser.add_argument('--granularity_kernel', action='store_true', help='if true, update index inside one kernel')
     args = parser.parse_args()
 
     print(args)

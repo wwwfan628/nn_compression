@@ -15,6 +15,7 @@
 # exit on errors
 set -o errexit
 # execute python file
-python train3.py --dataset_name=ImageNet --model_name=ResNet18 --train_index
+python train.py --dataset_name=MNIST --model_name=LeNet5 --train_index --ste --granularity_channel
+# python train3.py --dataset_name=MNIST --model_name=LeNet5 --granularity_channel
 echo finished at: `date`
 exit 0;

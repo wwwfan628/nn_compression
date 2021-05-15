@@ -4,14 +4,12 @@ from models.ResNet import ResNet
 from torch import nn, optim
 from torchvision.datasets import MNIST, CIFAR10, ImageNet, ImageFolder
 import torch
-import torchvision
 import numpy as np
 import argparse
-import copy
 import os
 import time
-from utils.index_optimizer import Index_SGD, Index_Adam
-from utils.prune_weight import prune_weight_interval, prune_weight_abs
+from utils.index_optimizer import Index_Adam_full, Index_SGD_full
+from utils.prune_weight import prune_weight_interval, prune_weight_abs, prune_weight_abs_all_layers
 from torchvision import transforms
 
 
@@ -52,11 +50,13 @@ def main(args):
         print('Architecture not supported! Please choose from: LeNet5, VGG and ResNet.')
 
     # preprocess parameters
+    # with torch.no_grad():
+    #     l = [module for module in model.modules() if isinstance(module, nn.Conv2d) or isinstance(module, nn.Linear)]
+    #     for layer in l:
+    #         #prune_weight_interval(layer.weight)
+    #         prune_weight_abs(layer.weight, amount=0.9)
     with torch.no_grad():
-        l = [module for module in model.modules() if isinstance(module, nn.Conv2d) or isinstance(module, nn.Linear)]
-        for layer in l:
-            #prune_weight_interval(layer.weight)
-            prune_weight_abs(layer.weight, amount=0.9)
+        prune_weight_abs_all_layers(model.parameters(), amount=0.9)
 
     # train
     if args.train_index:
@@ -123,16 +123,23 @@ def validate(model, dataloader_test):
 
 
 
-def train(model, dataloader_train, dataloader_test, train_index=False, max_epoch=200, lr=1e-3, patience=20):
+def train(model, dataloader_train, dataloader_test, args):
     dur = []  # duration for training epochs
     loss_func = nn.CrossEntropyLoss()
     if args.train_index:
         if 'LeNet' in args.model_name:
-            optimizer = Index_Adam(model.parameters(), lr=1e-1)  # for LeNet5
+            optimizer = Index_SGD_full(model.parameters(), lr=0.4, momentum=0.9, ste=args.ste,
+                                       params_prime=model.parameters(), granularity_channel=args.granularity_channel,
+                                       granularity_kernel=args.granularity_kernel)
         elif 'VGG' in args.model_name:
-            optimizer = Index_SGD(model.parameters(), lr=1e-2, momentum=0.9)  # for VGG
+            optimizer = Index_SGD_full(model.parameters(), lr=1e-2, momentum=0.9, ste=args.ste,
+                                       params_prime=model.parameters(), granularity_channel=args.granularity_channel,
+                                       granularity_kernel=args.granularity_kernel)  # for VGG
         else:
-            optimizer = Index_SGD(model.parameters(), lr=0.4, nesterov=True, momentum=0.9, weight_decay=1e-4)
+            optimizer = Index_SGD_full(model.parameters(), lr=0.4, nesterov=True, momentum=0.9, weight_decay=1e-4,
+                                       ste=args.ste, params_prime=model.parameters(),
+                                       granularity_channel=args.granularity_channel,
+                                       granularity_kernel=args.granularity_kernel)
     else:
         #optimizer = optim.SGD(model.parameters(), lr=args.lr)
         optimizer = optim.Adam(model.parameters(), lr=args.lr)
@@ -140,7 +147,7 @@ def train(model, dataloader_train, dataloader_test, train_index=False, max_epoch
     corresp_train_acc = 0
     best_epoch = 0
     cur_step = 0
-    for epoch in range(max_epoch):
+    for epoch in range(args.max_epoch):
         # adjust lr
         if 'LeNet' in args.model_name or 'VGG' in args.model_name:
             optimizer.param_groups[0]['lr'] *= 0.99
@@ -171,14 +178,14 @@ def train(model, dataloader_train, dataloader_test, train_index=False, max_epoch
             best_epoch = epoch + 1
             cur_step = 0
             # save checkpoint
-            if train_index:
+            if args.train_index:
                 param_after_training_path = './checkpoints/final_param_' + args.model_name + '_' + args.dataset_name + '_train_index_prune.pth'
             else:
                 param_after_training_path = './checkpoints/final_param_' + args.model_name + '_' + args.dataset_name + '_prune.pth'
             torch.save(model.state_dict(), param_after_training_path)
         else:
             cur_step += 1
-            if cur_step == patience:
+            if cur_step == args.patience:
                 break
     print("Training finished! Best test accuracy = {:.4f}%, corresponding training accuracy = {:.4f}%, "
           "found at Epoch {:05d}.".format(best_test_acc, corresp_train_acc, best_epoch))
@@ -187,7 +194,7 @@ def train(model, dataloader_train, dataloader_test, train_index=False, max_epoch
 if __name__ == '__main__':
 
     # get parameters
-    parser = argparse.ArgumentParser(description="Fixed Point")
+    parser = argparse.ArgumentParser(description="Pruning")
 
     parser.add_argument('--dataset_name', default='MNIST', help='choose dataset from: MNIST, CIFAR10, ImageNet')
     parser.add_argument('--model_name', default='LeNet5', help='choose architecture from: LeNet5, VGG16, ResNet18')
@@ -195,6 +202,9 @@ if __name__ == '__main__':
     parser.add_argument('--max_epoch', type=int, default=250, help='max training epoch')
     parser.add_argument('--lr', type=float, default=1e-3, help='learning rate of optimizer')
     parser.add_argument('--patience', type=int, default=20, help='patience for early stop')
+    parser.add_argument('--ste', action='store_true', help='if use straight through estimation or not')
+    parser.add_argument('--granularity_channel', action='store_true', help='if true, update index inside one channel')
+    parser.add_argument('--granularity_kernel', action='store_true', help='if true, update index inside one kernel')
     args = parser.parse_args()
 
     print(args)

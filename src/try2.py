@@ -4,14 +4,11 @@ from models.ResNet import ResNet_quantized
 from torch import nn, optim
 from torchvision.datasets import MNIST, CIFAR10, ImageNet, ImageFolder
 import torch
-import torchvision
 import numpy as np
 import argparse
-import copy
 import os
 import time
-from utils.index_optimizer import Index_SGD, Index_Adam
-from utils.prune_weight import prune_weight_interval, prune_weight_abs
+from utils.prune_weight import prune_weight_interval, prune_weight_abs, prune_weight_abs_all_layers
 from torchvision import transforms
 
 
@@ -43,27 +40,30 @@ def main(args):
 
     # build neural network
     if args.model_name == 'LeNet5':
-        model = LeNet5_quantized(in_channels=in_channels, num_classes=num_classes, normal_init=True, small=args.small, extra_small=args.extra_small).to(device)
+        model = LeNet5_quantized(in_channels=in_channels, num_classes=num_classes, normal_init=True, granularity_channel=args.granularity_channel, granularity_kernel=args.granularity_kernel).to(device)
     elif 'VGG' in args.model_name:
-        model = VGG_small_quantized(in_channels=in_channels, num_classes=num_classes, normal_init=True, small=args.small, extra_small=args.extra_small).to(device)
+        model = VGG_small_quantized(in_channels=in_channels, num_classes=num_classes, normal_init=True, granularity_channel=args.granularity_channel, granularity_kernel=args.granularity_kernel).to(device)
     elif 'ResNet' in args.model_name:
-        model = ResNet_quantized(ResNet_type=args.model_name, image_channels=in_channels, num_classes=num_classes, normal_init=True, small=args.small, extra_small=args.extra_small).to(device)
+        model = ResNet_quantized(ResNet_type=args.model_name, image_channels=in_channels, num_classes=num_classes, normal_init=True, granularity_channel=args.granularity_channel, granularity_kernel=args.granularity_kernel).to(device)
     else:
         print('Architecture not supported! Please choose from: LeNet5, VGG and ResNet.')
 
     # preprocess parameters
+    # with torch.no_grad():
+    #     l = [module for module in model.modules() if isinstance(module, nn.Conv2d) or isinstance(module, nn.Linear)]
+    #     for layer in l:
+    #         #prune_weight_interval(layer.weight)
+    #         prune_weight_abs(layer.weight, amount=0.9)
+    #         layer.set_init_weight(layer.weight)
     with torch.no_grad():
+        prune_weight_abs_all_layers(model.parameters(), amount=0.9)
         l = [module for module in model.modules() if isinstance(module, nn.Conv2d) or isinstance(module, nn.Linear)]
         for layer in l:
-            #prune_weight_interval(layer.weight)
-            prune_weight_abs(layer.weight, amount=0.9)
             layer.set_init_weight(layer.weight)
+            layer.set_init_bias(layer.bias)
 
     # train
-    if args.train_index:
-        init_param_path = './checkpoints/init_param_' + args.model_name + '_' + args.dataset_name + '_train_index_prune_STE.pth'
-    else:
-        init_param_path = './checkpoints/init_param_' + args.model_name + '_' + args.dataset_name + '_prune_STE.pth'
+    init_param_path = './checkpoints/init_param_' + args.model_name + '_' + args.dataset_name + '_train_index_prune_STE.pth'
     # save initial parameters
     torch.save(model.state_dict(), init_param_path)
     train(model, dataloader_train, dataloader_test, args)
@@ -126,16 +126,12 @@ def validate(model, dataloader_test):
 def train(model, dataloader_train, dataloader_test, args):
     dur = []  # duration for training epochs
     loss_func = nn.CrossEntropyLoss()
-    if args.train_index:
-        if 'LeNet' in args.model_name:
-            optimizer = Index_Adam(model.parameters(), lr=1e-1)  # for LeNet5
-        elif 'VGG' in args.model_name:
-            optimizer = Index_SGD(model.parameters(), lr=1e-2, momentum=0.9)  # for VGG
-        else:
-            optimizer = Index_SGD(model.parameters(), lr=0.4, nesterov=True, momentum=0.9, weight_decay=1e-4)
+    if 'LeNet' in args.model_name:
+        optimizer = optim.SGD(model.parameters(), lr=0.4, momentum=0.9)  # for LeNet5
+    elif 'VGG' in args.model_name:
+        optimizer = optim.SGD(model.parameters(), lr=1e-2, momentum=0.9)  # for VGG
     else:
-        #optimizer = optim.SGD(model.parameters(), lr=args.lr)
-        optimizer = optim.Adam(model.parameters(), lr=args.lr)
+        optimizer = optim.SGD(model.parameters(), lr=0.4, nesterov=True, momentum=0.9, weight_decay=1e-4)
     best_test_acc = 0
     corresp_train_acc = 0
     best_epoch = 0
@@ -171,10 +167,7 @@ def train(model, dataloader_train, dataloader_test, args):
             best_epoch = epoch + 1
             cur_step = 0
             # save checkpoint
-            if args.train_index:
-                param_after_training_path = './checkpoints/final_param_' + args.model_name + '_' + args.dataset_name + '_train_index_prune_STE.pth'
-            else:
-                param_after_training_path = './checkpoints/final_param_' + args.model_name + '_' + args.dataset_name + '_prune_STE.pth'
+            param_after_training_path = './checkpoints/final_param_' + args.model_name + '_' + args.dataset_name + '_train_index_prune_STE.pth'
             torch.save(model.state_dict(), param_after_training_path)
         else:
             cur_step += 1
@@ -187,16 +180,15 @@ def train(model, dataloader_train, dataloader_test, args):
 if __name__ == '__main__':
 
     # get parameters
-    parser = argparse.ArgumentParser(description="Fixed Point")
+    parser = argparse.ArgumentParser(description="Pruning with STE Layer")
 
     parser.add_argument('--dataset_name', default='MNIST', help='choose dataset from: MNIST, CIFAR10, ImageNet')
     parser.add_argument('--model_name', default='LeNet5', help='choose architecture from: LeNet5, VGG16, ResNet18')
-    parser.add_argument('--train_index', action='store_true', help='if true train index, else train in normal way')
     parser.add_argument('--max_epoch', type=int, default=250, help='max training epoch')
     parser.add_argument('--lr', type=float, default=1e-3, help='learning rate of optimizer')
     parser.add_argument('--patience', type=int, default=20, help='patience for early stop')
-    parser.add_argument('--small', action='store_true', help='if true, index will be optimized in granularity of one channel')
-    parser.add_argument('--extra_small', action='store_true', help='if true, index will be optimized in granularity of one kernel')
+    parser.add_argument('--granularity_channel', action='store_true', help='if true, index will be optimized inside one channel')
+    parser.add_argument('--granularity_kernel', action='store_true', help='if true, index will be optimized inside one kernel')
     args = parser.parse_args()
 
     print(args)
