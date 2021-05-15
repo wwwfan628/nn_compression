@@ -34,7 +34,7 @@ def prune_weight_abs_all_layers(params, amount=0.9):
     params_shape = []
     params_flatten_len = []
     for param in params:
-        params_abs_flatten = np.append(params_abs_flatten, param.abs().view(-1).clone().detach())
+        params_abs_flatten = np.append(params_abs_flatten, param.abs().view(-1).clone().detach().cpu())
         params_shape.append(param.shape)
         params_flatten_len.append(len(param.view(-1)))
     params_abs_flatten = torch.Tensor(params_abs_flatten)
