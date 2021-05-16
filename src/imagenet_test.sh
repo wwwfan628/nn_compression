@@ -15,6 +15,6 @@
 # exit on errors
 set -o errexit
 # execute python file
-python imagenet_test2.py
+python imagenet_test.py
 echo finished at: `date`
 exit 0;

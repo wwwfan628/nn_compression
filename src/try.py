@@ -33,7 +33,7 @@ def main(args):
     elif args.dataset_name == 'CIFAR10':
         num_threads = 8
     else:
-        num_threads = 8
+        num_threads = 16
     torch.set_num_threads(num_threads)
 
     # load dataset
@@ -87,8 +87,8 @@ def load_dataset(dataset_name):
         data_train = CIFAR10(root='../datasets', train=True, download=True, transform=transform_train)
         data_test = CIFAR10(root='../datasets', train=False, download=True, transform=transform_test)
     elif dataset_name == 'ImageNet':
-        num_workers = 8
-        batch_size = 128
+        num_workers = 32
+        batch_size = 1024
         transform_train = transforms.Compose([transforms.RandomResizedCrop(224), transforms.RandomHorizontalFlip(),
                                         transforms.ToTensor(),
                                         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])])
