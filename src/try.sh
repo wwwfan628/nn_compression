@@ -5,7 +5,7 @@
 #SBATCH --error=./%j.err                  # where to store error messages
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=1
-#SBATCH --mem=64G
+#SBATCH --mem=8G
 
 /bin/echo Running on host: `hostname`
 /bin/echo In directory: `pwd`
@@ -15,7 +15,7 @@
 # exit on errors
 set -o errexit
 # execute python file
-python try.py --dataset_name=MNIST --model_name=LeNet5 --train_index --ste --granularity_channel
-# python try2.py --dataset_name=MNIST --model_name=LeNet5 --granularity_channel
+# python try.py --dataset_name=CIFAR10 --model_name=VGG --train_index --ste --granularity_kernel
+python try2.py --dataset_name=CIFAR10 --model_name=VGG --granularity_kernel
 echo finished at: `date`
 exit 0;

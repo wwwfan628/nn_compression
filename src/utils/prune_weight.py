@@ -37,7 +37,7 @@ def prune_weight_abs_all_layers(params, amount=0.9):
         params_abs_flatten = np.append(params_abs_flatten, param.abs().view(-1).clone().detach().cpu())
         params_shape.append(param.shape)
         params_flatten_len.append(len(param.view(-1)))
-    params_abs_flatten = torch.Tensor(params_abs_flatten)
+    params_abs_flatten = torch.Tensor(params_abs_flatten).to(device)
     k = int(len(params_abs_flatten) * (1-amount))
     idx_topk = torch.topk(params_abs_flatten, k=k)[1]
     mask_flatten = torch.zeros(params_abs_flatten.shape).to(device)
