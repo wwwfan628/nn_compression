@@ -50,13 +50,14 @@ def main(args):
         print('Architecture not supported! Please choose from: LeNet5, VGG and ResNet.')
 
     # preprocess parameters
-    # with torch.no_grad():
-    #     l = [module for module in model.modules() if isinstance(module, nn.Conv2d) or isinstance(module, nn.Linear)]
-    #     for layer in l:
-    #         #prune_weight_interval(layer.weight)
-    #         prune_weight_abs(layer.weight, amount=0.9)
     with torch.no_grad():
-        prune_weight_abs_all_layers(model.parameters(), amount=0.9)
+        if args.model_name == 'LeNet5':
+            prune_weight_abs_all_layers(model.parameters(), amount=0.9)
+        else:
+            l = [module for module in model.modules() if isinstance(module, nn.Conv2d) or isinstance(module, nn.Linear)]
+            for layer in l:
+                #prune_weight_interval(layer.weight)
+                prune_weight_abs(layer.weight, amount=0.9)
 
     # train
     if args.train_index:

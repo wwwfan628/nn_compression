@@ -5,8 +5,8 @@
 #SBATCH --error=./%j.err                  # where to store error messages
 #SBATCH --gres=gpu:4
 #SBATCH --cpus-per-task=16
-#SBATCH --mem=300G
-#SBATCH --nodelist=tikgpu04
+#SBATCH --mem=512G
+#SBATCH --nodelist=tikgpu05
 
 /bin/echo Running on host: `hostname`
 /bin/echo In directory: `pwd`
