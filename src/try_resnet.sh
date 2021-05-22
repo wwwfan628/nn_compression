@@ -5,7 +5,7 @@
 #SBATCH --error=./%j.err                  # where to store error messages
 #SBATCH --gres=gpu:4
 #SBATCH --cpus-per-task=16
-#SBATCH --mem=512G
+#SBATCH --mem=400G
 #SBATCH --nodelist=tikgpu05
 
 /bin/echo Running on host: `hostname`
