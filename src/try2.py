@@ -130,6 +130,7 @@ def train(model, dataloader_train, dataloader_test, args):
     elif 'VGG' in args.model_name:
         optimizer = optim.SGD(model.parameters(), lr=1e-2, momentum=0.9)  # for VGG
     else:
+        model = torch.nn.DataParallel(model).to(device)
         optimizer = optim.SGD(model.parameters(), lr=0.4, nesterov=True, momentum=0.9, weight_decay=1e-4)
     best_test_acc = 0
     corresp_train_acc = 0
