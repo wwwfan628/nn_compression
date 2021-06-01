@@ -3,6 +3,12 @@ import torch
 from ._index_functional import index_sgd, index_adam, index_sgd_small_range, \
     index_adam_small_range, index_sgd_full, index_adam_full, index_adam_input
 
+if torch.cuda.is_available():
+    device = torch.device("cuda:0")
+else:
+    device = torch.device("cpu")
+    print("No Cuda Available")
+
 
 class Index_SGD(Optimizer):
     def __init__(self, params, lr=0.4, momentum=0, dampening=0, weight_decay=0, nesterov=False):
@@ -170,7 +176,7 @@ class Index_SGD_full(Optimizer):
             if params_prime is None:
                 raise ValueError("Invalid params_prime value: {}".format(params_prime))
             else:
-                params_prime = list(param_prime.clone().detach() for param_prime in params_prime)
+                params_prime = list(param_prime.clone().detach().to(device) for param_prime in params_prime)
         else:
             if params_prime is not None:
                 params_prime = None
@@ -267,7 +273,7 @@ class Index_Adam_full(Optimizer):
             if params_prime is None:
                 raise ValueError("Invalid params_prime value: {}".format(params_prime))
             else:
-                params_prime = list(param_prime.clone().detach() for param_prime in params_prime)
+                params_prime = list(param_prime.clone().detach().to(device) for param_prime in params_prime)
         else:
             if params_prime is not None:
                 params_prime = None
@@ -277,7 +283,7 @@ class Index_Adam_full(Optimizer):
         super(Index_Adam_full, self).__init__(params, defaults)
 
     def __setstate__(self, state):
-        super(Index_Adam, self).__setstate__(state)
+        super(Index_Adam_full, self).__setstate__(state)
         for group in self.param_groups:
             group.setdefault('amsgrad', False)
             group.setdefault('ste', False)
