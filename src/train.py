@@ -8,7 +8,7 @@ import numpy as np
 import argparse
 import os
 import time
-from utils.index_optimizer import Index_Adam_full, Index_SGD_full
+from utils.index_optimizer import Index_Adam_full, Index_SGD_full, Index_Adam
 from torchvision import transforms
 
 
@@ -171,7 +171,7 @@ def train(model, dataloader_train, dataloader_test, args):
             cur_step = 0
             # save checkpoint
             if args.train_index:
-                final_param_path = './checkpoints/final_param_' + args.model_name + '_' + args.dataset_name + '_train_index.pth'
+                final_param_path = './checkpoints/final_param_' + args.model_name + '_' + args.dataset_name + '_train_index_1.pth'
             else:
                 final_param_path = './checkpoints/final_param_' + args.model_name + '_' + args.dataset_name + '.pth'
             torch.save(model.state_dict(), final_param_path)

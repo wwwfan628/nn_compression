@@ -171,6 +171,9 @@ class Index_SGD_full(Optimizer):
                 raise ValueError("Invalid params_prime value: {}".format(params_prime))
             else:
                 params_prime = list(param_prime.clone().detach() for param_prime in params_prime)
+        else:
+            if params_prime is not None:
+                params_prime = None
         defaults = dict(lr=lr, momentum=momentum, dampening=dampening, weight_decay=weight_decay, nesterov=nesterov,
                         ste=ste, params_prime=params_prime, granularity_channel=granularity_channel,
                         granularity_kernel=granularity_kernel)
@@ -265,6 +268,9 @@ class Index_Adam_full(Optimizer):
                 raise ValueError("Invalid params_prime value: {}".format(params_prime))
             else:
                 params_prime = list(param_prime.clone().detach() for param_prime in params_prime)
+        else:
+            if params_prime is not None:
+                params_prime = None
         defaults = dict(lr=lr, betas=betas, eps=eps, weight_decay=weight_decay, amsgrad=amsgrad, ste=ste,
                         params_prime=params_prime, granularity_channel=granularity_channel,
                         granularity_kernel=granularity_kernel)
