@@ -8,7 +8,7 @@ import numpy as np
 import argparse
 import os
 import time
-from utils.index_optimizer import Index_Adam_full, Index_SGD_full, Index_Adam
+from utils.index_optimizer import Index_Adam_full, Index_SGD_full, Index_Adam, Index_SGD
 from torchvision import transforms
 
 
@@ -121,9 +121,10 @@ def train(model, dataloader_train, dataloader_test, args):
                                         granularity_channel=args.granularity_channel,
                                         granularity_kernel=args.granularity_kernel)  # for LeNet5
         elif 'VGG' in args.model_name:
-            optimizer = Index_SGD_full(model.parameters(), lr=1e-2, momentum=0.9, ste=args.ste,
-                                       params_prime=model.parameters(), granularity_channel=args.granularity_channel,
-                                       granularity_kernel=args.granularity_kernel)  # for VGG
+            # optimizer = Index_SGD_full(model.parameters(), lr=1e-2, momentum=0.9, ste=args.ste,
+            #                            params_prime=model.parameters(), granularity_channel=args.granularity_channel,
+            #                            granularity_kernel=args.granularity_kernel)  # for VGG
+            optimizer = Index_SGD(model.parameters(), lr=1e-2, momentum=0.9)  # for VGG
         else:
             model = torch.nn.DataParallel(model).to(device)
             optimizer = Index_SGD_full(model.parameters(), lr=0.4, nesterov=True, momentum=0.9, weight_decay=1e-4,
