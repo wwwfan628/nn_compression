@@ -1,5 +1,10 @@
 import torch
 
+if torch.cuda.is_available():
+    device = torch.device("cuda:0")
+else:
+    device = torch.device("cpu")
+
 class ste_function(torch.autograd.Function):
     @staticmethod
     def forward(ctx, weight, init_weight):
@@ -9,7 +14,7 @@ class ste_function(torch.autograd.Function):
 
     @staticmethod
     def backward(ctx, grad_output):
-        return grad_output, torch.zeros(grad_output.shape)
+        return grad_output, torch.zeros(grad_output.shape).to(device)
 
 
 class ste_function_granularity_channel(torch.autograd.Function):
@@ -22,7 +27,7 @@ class ste_function_granularity_channel(torch.autograd.Function):
 
     @staticmethod
     def backward(ctx, grad_output):
-        return grad_output, torch.zeros(grad_output.shape)
+        return grad_output, torch.zeros(grad_output.shape).to(device)
 
 
 class ste_function_granularity_kernel(torch.autograd.Function):
@@ -36,4 +41,4 @@ class ste_function_granularity_kernel(torch.autograd.Function):
 
     @staticmethod
     def backward(ctx, grad_output):
-        return grad_output, torch.zeros(grad_output.shape)
+        return grad_output, torch.zeros(grad_output.shape).to(device)
