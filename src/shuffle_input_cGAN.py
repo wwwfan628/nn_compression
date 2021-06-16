@@ -2,14 +2,13 @@ import numpy as np
 import os
 import argparse
 import torch
-from torch.autograd import Variable
 import torchvision.transforms as transforms
 import random
 from torch.utils.data import DataLoader
 import torch.nn as nn
-import torch.nn.functional as F
 import torchvision.utils as vutils
-from torchvision.datasets import MNIST, CIFAR10, ImageFolder
+from torchvision.datasets import MNIST, CIFAR10
+from torch.utils.tensorboard import SummaryWriter
 
 
 if torch.cuda.is_available():
@@ -18,6 +17,7 @@ else:
     device = torch.device("cpu")
     print("No Cuda Available")
 
+writer = SummaryWriter()
 
 class ste_function_gray(torch.autograd.Function):
     @staticmethod
@@ -217,52 +217,43 @@ def train(generator, discriminator, dataloader_train, dataloader_test, args):
             d_optimizer.step()
 
             if i == 100:
-                vutils.save_image(images, '%s/real_images_epoch_%03d.png' % (args.output, epoch), normalize=True)
-                vutils.save_image(random_images, '%s/random_input_images_epoch_%03d.png' % (args.output, epoch),
-                                  normalize=True)
+                writer.add_images(tag='real_images', img_tensor=images, global_step=epoch)
+                writer.add_images(tag='random_images', img_tensor=random_images, global_step=epoch)
+                #vutils.save_image(images, '%s/real_images_epoch_%03d.png' % (args.output, epoch), normalize=True)
+                #vutils.save_image(random_images, '%s/random_images_epoch_%03d.png' % (args.output, epoch), normalize=True)
                 fake_quantized, fake = generator(noise, random_images, gen_labels)
-                vutils.save_image(fake_quantized.detach(), '%s/gen_images_quantized_epoch_%03d.png' % (args.output, epoch),
-                                  normalize=True)
-                vutils.save_image(fake.detach(), '%s/gen_images_epoch_%03d.png' % (args.output, epoch), normalize=True)
+                writer.add_images(tag='gen_images_quantized', img_tensor=fake_quantized, global_step=epoch)
+                writer.add_images(tag='gen_images', img_tensor=fake, global_step=epoch)
+                #vutils.save_image(fake_quantized.detach(), '%s/gen_images_quantized_epoch_%03d.png' % (args.output, epoch), normalize=True)
+                #vutils.save_image(fake.detach(), '%s/gen_images_epoch_%03d.png' % (args.output, epoch), normalize=True)
 
         print("[Epoch: %d/%d]" "[D loss: %f]" "[G loss: %f]" % (epoch + 1, args.max_epoch, d_loss.item(), g_loss.item()))
 
         # checkpoints
-        torch.save(generator.state_dict(), '%s/generator_epoch_%d.pth' % (args.output, epoch))
-        torch.save(discriminator.state_dict(), '%s/discriminator_epoch_%d.pth' % (args.output, epoch))
+        if epoch % 100 == 0:
+            torch.save(generator.state_dict(), '%s/generator_epoch_%d.pth' % (args.output, epoch))
+            torch.save(discriminator.state_dict(), '%s/discriminator_epoch_%d.pth' % (args.output, epoch))
 
 
 def load_dataset(dataset_name):
     # load dataset
     if dataset_name == 'MNIST':
-        num_workers = 1
         batch_size = 64
         transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
         data_train = MNIST(root='../datasets', train=True, download=True, transform=transform)
         data_test = MNIST(root='../datasets', train=False, download=True, transform=transform)
     elif dataset_name == 'CIFAR10':
-        num_workers = 8
         batch_size = 64
         transform = transforms.Compose([transforms.ToTensor(),
                                         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
         data_train = CIFAR10(root='../datasets', train=True, download=True, transform=transform)
         data_test = CIFAR10(root='../datasets', train=False, download=True, transform=transform)
-    elif dataset_name == 'ImageNet':
-        num_workers = 32
-        batch_size = 512
-        transform_train = transforms.Compose([transforms.RandomResizedCrop(224), transforms.RandomHorizontalFlip(),
-                                              transforms.ToTensor(),
-                                              transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])])
-        transform_val = transforms.Compose([transforms.Resize(256), transforms.CenterCrop(224), transforms.ToTensor(),
-                                            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])])
-        data_train = ImageFolder(root='/srv/beegfs01/projects/imagenet/data/train/', transform=transform_train)
-        data_test = ImageFolder(root='/srv/beegfs01/projects/imagenet/data/val/', transform=transform_val)
     else:
-        print('Dataset is not supported! Please choose from: MNIST, CIFAR10 and ImageNet.')
+        print('Dataset is not supported! Please choose from: MNIST or CIFAR10.')
     in_channels = data_train[0][0].shape[0]
     num_classes = len(data_train.classes)
-    dataloader_train = torch.utils.data.DataLoader(data_train, batch_size=batch_size, shuffle=True, pin_memory=True, num_workers=num_workers)
-    dataloader_test = torch.utils.data.DataLoader(data_test, batch_size=batch_size, shuffle=True, pin_memory=True, num_workers=num_workers)
+    dataloader_train = torch.utils.data.DataLoader(data_train, batch_size=batch_size, shuffle=True, pin_memory=True)
+    dataloader_test = torch.utils.data.DataLoader(data_test, batch_size=batch_size, shuffle=True, pin_memory=True)
     return in_channels, num_classes, dataloader_train, dataloader_test
 
 
