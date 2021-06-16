@@ -228,6 +228,9 @@ def train(generator, discriminator, dataloader_train, dataloader_test, args):
                 #vutils.save_image(fake.detach(), '%s/gen_images_epoch_%03d.png' % (args.output, epoch), normalize=True)
 
         print("[Epoch: %d/%d]" "[D loss: %f]" "[G loss: %f]" % (epoch + 1, args.max_epoch, d_loss.item(), g_loss.item()))
+        # plot accuracy
+        writer.add_scalar('Discriminator Loss', d_loss.item(), epoch)
+        writer.add_scalar('Generator Loss', g_loss.item(), epoch)
 
         # checkpoints
         if epoch % 100 == 0:
