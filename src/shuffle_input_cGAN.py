@@ -172,8 +172,8 @@ def train(generator, discriminator, dataloader_train, dataloader_test, args):
             labels = labels.to(device)
 
             # creating real and fake tensors of labels
-            real_labels = torch.zeros([batch_size, 1]).fill_(real_label)
-            fake_labels = torch.zeros([batch_size, 1]).fill_(fake_label)
+            real_labels = torch.zeros([batch_size, 1]).fill_(real_label).to(device)
+            fake_labels = torch.zeros([batch_size, 1]).fill_(fake_label).to(device)
 
             # initializing gradient
             g_optimizer.zero_grad()
