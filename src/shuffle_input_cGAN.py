@@ -41,7 +41,7 @@ class ste_function_rgb(torch.autograd.Function):
         transform = transforms.Compose([transforms.Grayscale(num_output_channels=1)])
         gen_pixels_grayscale = transform(gen_images).view(gen_images.size()[0], -1)
         init_pixels_grayscale = transform(init_images).view(init_images.size()[0], -1)
-        tmp = torch.zeros(init_images.size()[2]*init_images.size()[3])
+        tmp = torch.zeros(init_images.size()[2]*init_images.size()[3]).to(device)
         for image_idx, image_init_pixels in enumerate(init_images):
             init_idx = torch.argsort(init_pixels_grayscale[image_idx])
             gen_idx = torch.argsort(gen_pixels_grayscale[image_idx])
