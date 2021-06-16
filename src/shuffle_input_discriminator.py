@@ -56,9 +56,6 @@ def main(args):
     for parameter in discriminator_3.parameters():
         parameter.requires_grad = False
 
-    global classes_average_images
-    classes_average_images = average_image(dataset_train)
-
     # randomize the input image
     random_idx = torch.randperm(image_tensor.nelement())
     random_image_tensor = image_tensor.view(-1)[random_idx].view(image_tensor.size())
@@ -102,15 +99,12 @@ def load_dataset(dataset_name):
     return in_channels, num_classes, dataset_train, dataset_test
 
 
-def average_image(dataset):
-    average_images = torch.zeros([10, 1, 28, 28])
-    count = torch.zeros([10])
-    for i, (image, label) in enumerate(dataset):
-        average_images[label] += image
-        count[label] += 1
-    for i in range(10):
-        average_images[i] = average_images[i] / count[i]
-    return average_images
+def accuracy(image_tensor, indices):
+    img_shape = image_tensor.shape
+    total = img_shape[-1] * img_shape[-2]
+    correct_indices = [indices.view(-1)[i] == i for i in range(total)]
+    correct = torch.sum(torch.tensor(correct_indices))
+    return correct*100.0/total
 
 
 def plot_image(image_tensor, name=None):
@@ -135,10 +129,9 @@ def optimize_input(models, discriminators, random_image_tensor, init_indices, la
     best_image_tensor = None
     cur_step = 0
     factor = 1
-    global classes_average_images
     for epoch in range(args.max_epoch):
         # adjust lr
-        # optimizer.param_groups[0]['lr'] *= 0.99
+        optimizer.param_groups[0]['lr'] *= 0.99
         t0 = time.time()  # start time
         random_image_tensor = random_image_tensor.to(device)
         label = torch.tensor([label]).to(device)
@@ -152,13 +145,10 @@ def optimize_input(models, discriminators, random_image_tensor, init_indices, la
             loss += (1.0/3.0)*loss_func(pred, torch.tensor([1], dtype=int))
         loss_pixel_diff = pixel_diff_loss(random_image_tensor)
         loss_border_pixel = border_pixel_loss(random_image_tensor)
-        loss_average_image = average_image_loss(random_image_tensor, classes_average_images[label])
-        factor *= 0.99
-        loss = loss + factor * loss_pixel_diff + loss_border_pixel + loss_average_image
-        #loss = loss + factor * loss_pixel_diff + loss_border_pixel
+        factor *= 0.9
+        loss = loss + factor * loss_pixel_diff + loss_border_pixel
         loss.backward()
         optimizer.step()
-
 
         # compute accuracy
         dur.append(time.time() - t0)
@@ -181,20 +171,6 @@ def optimize_input(models, discriminators, random_image_tensor, init_indices, la
                 break
     plot_image(best_image_tensor, name='Image after Optimization')
     print("Training finished! Best accuracy = {:.4f}%, found at Epoch {:05d}.".format(best_acc, best_epoch))
-
-
-def average_image_loss(image_batch_tensor, class_average_image):
-    loss = (image_batch_tensor[0] - class_average_image).abs().sum()
-    return loss/(28*28)
-
-
-def accuracy(image_tensor, indices):
-    img_shape = image_tensor.shape
-    total = img_shape[-1] * img_shape[-2]
-    correct_indices = [indices.view(-1)[i] == i for i in range(total)]
-    correct = torch.sum(torch.tensor(correct_indices))
-    return correct*100.0/total
-
 
 def pixel_diff_loss(image_batch_tensor):
     num_pixels = 28*28*8
@@ -223,8 +199,8 @@ def border_pixel_loss(image_batch_tensor):
             for pixel in row[:3]:
                 loss += pixel
             for pixel in row[24:]:
-                loss += pixel
-    return loss/(28*12-9*4)
+                loss+= pixel
+    return loss
 
 if __name__ == '__main__':
 
@@ -233,14 +209,14 @@ if __name__ == '__main__':
 
     parser.add_argument('--dataset_name', default='MNIST', help='choose dataset from: MNIST, CIFAR10, ImageNet')
     parser.add_argument('--model_name', default='LeNet5', help='choose architecture from: LeNet5, VGG, ResNet18')
-    parser.add_argument('--image_index', type=int, default=17, help='if true train index, else train in normal way')
+    parser.add_argument('--image_index', type=int, default=0, help='if true train index, else train in normal way')
     parser.add_argument('--max_epoch', type=int, default=250, help='max optimization iteration')
     parser.add_argument('--lr', type=float, default=1000, help='learning rate of optimizer')
     parser.add_argument('--patience', type=int, default=20, help='patience for early stop')
     parser.add_argument('--ste', action='store_true', help='if use straight through estimation or not')
-    parser.add_argument('--checkpoint_path_1', default='./checkpoints/final_param_LeNet5_MNIST_train_index_STE_4.pth')
-    parser.add_argument('--checkpoint_path_2', default='./checkpoints/final_param_LeNet5_MNIST_train_index_STE_5.pth')
-    parser.add_argument('--checkpoint_path_3', default='./checkpoints/final_param_LeNet5_MNIST_train_index_STE_6.pth')
+    parser.add_argument('--checkpoint_path_1', default='./checkpoints/final_param_LeNet5_MNIST_train_index_STE_1.pth')
+    parser.add_argument('--checkpoint_path_2', default='./checkpoints/final_param_LeNet5_MNIST_train_index_STE_2.pth')
+    parser.add_argument('--checkpoint_path_3', default='./checkpoints/final_param_LeNet5_MNIST_train_index_STE_3.pth')
     args = parser.parse_args()
 
     print(args)

@@ -30,8 +30,6 @@ def main(args):
         num_threads = 1
     elif args.dataset_name == 'CIFAR10':
         num_threads = 8
-    else:
-        num_threads = 16
     torch.set_num_threads(num_threads)
 
     # load dataset
@@ -39,21 +37,15 @@ def main(args):
 
     # build neural network
     if args.model_name == 'LeNet5':
-        model = LeNet5(in_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
+        model = LeNet5(in_channels=in_channels, num_classes=2, normal_init=True).to(device)
+        #model.load_state_dict(torch.load('checkpoints/final_param_discriminator_MNIST_4.pth'))
+        #for parameter in list(model.parameters())[1:]:
+        #    parameter.requires_grad = False
     elif 'VGG' in args.model_name:
-        model = VGG_small(in_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
-    elif 'ResNet' in args.model_name:
-        model = ResNet(ResNet_type=args.model_name, image_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
+        model = VGG_small(in_channels=in_channels, num_classes=2, normal_init=True).to(device)
     else:
-        print('Architecture not supported! Please choose from: LeNet5, VGG and ResNet.')
+        print('Architecture not supported! Please choose from: LeNet5, VGG.')
 
-    # train
-    if args.train_index:
-        init_param_path = './checkpoints/init_param_' + args.model_name + '_' + args.dataset_name + '_train_index.pth'
-    else:
-        init_param_path = './checkpoints/init_param_' + args.model_name + '_' + args.dataset_name + '.pth'
-    # save initial parameters
-    torch.save(model.state_dict(), init_param_path)
     train(model, dataloader_train, dataloader_test, args)
 
 
@@ -94,21 +86,44 @@ def load_dataset(dataset_name):
     return in_channels, num_classes, dataloader_train, dataloader_test
 
 
-def validate(model, dataloader_test):
+
+def validate(model, dataloader_test, loss_func):
     # validate
     total = 0
     correct = 0
     model.eval()
+    losses = []
     with torch.no_grad():
         for i, (images, labels) in enumerate(dataloader_test):
+            # real image
             images = images.to(device)
-            x = model(images)
-            _, pred = torch.max(x, 1)
-            pred = pred.data.cpu()
-            total += x.size(0)
-            correct += torch.sum(pred == labels)
-    return correct*100.0/total
+            real_labels = torch.ones([images.shape[0]], dtype=int).to(device)
+            real_x = model(images)
+            _, real_pred = torch.max(real_x, 1)
+            real_pred = real_pred.data.cpu()
+            total += real_x.size(0)
+            correct += torch.sum(real_pred == 1)
+            real_loss = loss_func(real_x, real_labels)
+            # random image
+            random_images = shuffle_image(images.clone().detach().to(device))
+            random_labels = torch.zeros([images.shape[0]], dtype=int).to(device)
+            random_x = model(random_images)
+            _, random_pred = torch.max(random_x, 1)
+            random_pred = random_pred.data.cpu()
+            total += random_x.size(0)
+            correct += torch.sum(random_pred == 0)
+            random_loss = loss_func(random_x, random_labels)
+            losses.append(0.5 * (real_loss.item() + random_loss.item()))
+    mean_loss = np.mean(np.array(losses))
+    return correct*100.0/total, mean_loss
 
+
+def shuffle_image(batch_image_tensor):
+    random_batch_image_tensor = torch.zeros(batch_image_tensor.shape).to(device)
+    for i, image_tensor in enumerate(batch_image_tensor):
+        random_idx = torch.randperm(image_tensor.nelement())
+        random_batch_image_tensor[i] = image_tensor.view(-1)[random_idx].view(image_tensor.size())
+    return random_batch_image_tensor
 
 
 def train(model, dataloader_train, dataloader_test, args):
@@ -124,63 +139,63 @@ def train(model, dataloader_train, dataloader_test, args):
             #                            params_prime=model.parameters(), granularity_channel=args.granularity_channel,
             #                            granularity_kernel=args.granularity_kernel)  # for VGG
             optimizer = Index_SGD(model.parameters(), lr=1e-2, momentum=0.9)  # for VGG
-        else:
-            model = torch.nn.DataParallel(model).to(device)
-            optimizer = Index_SGD_full(model.parameters(), lr=0.4, nesterov=True, momentum=0.9, weight_decay=1e-4,
-                                       ste=args.ste, params_prime=model.parameters(),
-                                       granularity_channel=args.granularity_channel,
-                                       granularity_kernel=args.granularity_kernel)
     else:
         #optimizer = optim.SGD(model.parameters(), lr=args.lr)
         optimizer = optim.Adam(model.parameters(), lr=args.lr)
     best_test_acc = 0
+    best_test_loss = float('inf')
     corresp_train_acc = 0
+    corresp_train_loss = 0
     best_epoch = 0
     cur_step = 0
     for epoch in range(args.max_epoch):
         # adjust lr
         if 'LeNet' in args.model_name or 'VGG' in args.model_name:
             optimizer.param_groups[0]['lr'] *= 0.99
-        else:
-            if epoch < 10:
-                optimizer.param_groups[0]['lr'] = 0.4 * (epoch + 1) / 10
-            if epoch == 60 or epoch == 120 or epoch == 180:
-                optimizer.param_groups[0]['lr'] *= 0.1
         t0 = time.time()  # start time
         model.train()
         for i, (images, labels) in enumerate(dataloader_train):
             images = images.to(device)
-            labels = labels.to(device)
+            real_labels = torch.ones([images.shape[0]], dtype=int).to(device)
+            random_images = shuffle_image(images.clone().detach().to(device))
+            random_labels = torch.zeros([images.shape[0]], dtype=int).to(device)
             optimizer.zero_grad()
-            pred = model(images)
-            loss = loss_func(pred, labels)
+            real_pred = model(images)
+            real_loss = loss_func(real_pred, real_labels)
+            random_pred = model(random_images)
+            random_loss = loss_func(random_pred, random_labels)
+            loss = 0.5 * (real_loss + random_loss)
             loss.backward()
             optimizer.step()
 
         # validate
         dur.append(time.time() - t0)
-        train_accuracy = float(validate(model, dataloader_train))
-        test_accuracy = float(validate(model, dataloader_test))
-        print("Epoch {:05d} | Training Acc {:.4f}% | Test Acc {:.4f}% | Time(s) {:.4f}".format(epoch + 1, train_accuracy, test_accuracy, np.mean(dur)))
+        train_accuracy, train_mean_loss = validate(model, dataloader_train, loss_func)
+        test_accuracy, test_mean_loss = validate(model, dataloader_test, loss_func)
+        print("Epoch {:05d} | Training Acc {:.4f}% | Training Loss {:.4f}% | Test Acc {:.4f}% | Test Loss {:.4f}%| Time(s) {:.4f}"
+              .format(epoch + 1, train_accuracy, train_mean_loss, test_accuracy, test_mean_loss, np.mean(dur)))
 
         # early stop
-        if test_accuracy > best_test_acc:
+        if test_accuracy > best_test_acc or test_mean_loss < best_test_loss:
             best_test_acc = test_accuracy
+            best_test_loss = test_mean_loss
             corresp_train_acc = train_accuracy
+            corresp_train_loss = train_mean_loss
             best_epoch = epoch + 1
             cur_step = 0
             # save checkpoint
             if args.train_index:
-                final_param_path = './checkpoints/final_param_' + args.model_name + '_' + args.dataset_name + '_train_index.pth'
+                final_param_path = './checkpoints/final_param_discriminator_' + args.dataset_name + '_train_index.pth'
             else:
-                final_param_path = './checkpoints/final_param_' + args.model_name + '_' + args.dataset_name + '.pth'
+                final_param_path = './checkpoints/final_param_discriminator_' + args.dataset_name + '_1.pth'
             torch.save(model.state_dict(), final_param_path)
         else:
             cur_step += 1
             if cur_step == args.patience:
                 break
-    print("Training finished! Best test accuracy = {:.4f}%, corresponding training accuracy = {:.4f}%, "
-          "found at Epoch {:05d}.".format(best_test_acc, corresp_train_acc, best_epoch))
+    print("Training finished! Best test accuracy = {:.4f}%, test accuracy = {:.4f},"
+          "corresponding training accuracy = {:.4f}%, training loss = {:.4f}, found at Epoch {:03d}."
+          .format(best_test_acc, best_test_loss, corresp_train_acc, corresp_train_loss, best_epoch))
 
 
 
@@ -192,7 +207,7 @@ if __name__ == '__main__':
     parser.add_argument('--dataset_name', default='MNIST', help='choose dataset from: MNIST, CIFAR10, ImageNet')
     parser.add_argument('--model_name', default='LeNet5', help='choose architecture from: LeNet5, VGG, ResNet18')
     parser.add_argument('--train_index', action='store_true', help='if true train index, else train in normal way')
-    parser.add_argument('--max_epoch', type=int, default=250, help='max training epoch')
+    parser.add_argument('--max_epoch', type=int, default=100, help='max training epoch')
     parser.add_argument('--lr', type=float, default=1e-3, help='learning rate of optimizer')
     parser.add_argument('--patience', type=int, default=20, help='patience for early stop')
     parser.add_argument('--ste', action='store_true', help='if use straight through estimation or not')
