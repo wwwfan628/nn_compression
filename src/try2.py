@@ -32,7 +32,7 @@ def main(args):
     elif args.dataset_name == 'CIFAR10':
         num_threads = 8
     else:
-        num_threads = 8
+        num_threads = 16
     torch.set_num_threads(num_threads)
 
     # load dataset
@@ -51,12 +51,10 @@ def main(args):
     # preprocess parameters
     with torch.no_grad():
         l = [module for module in model.modules() if isinstance(module, nn.Conv2d) or isinstance(module, nn.Linear)]
-        if args.model_name == 'LeNet5':
-            prune_weight_abs_all_layers(model.parameters(), amount=0.9)
-        else:
-            for layer in l:
-                # prune_weight_interval(layer.weight)
-                prune_weight_abs(layer.weight, amount=0.9)
+        prune_weight_abs_all_layers(model.parameters(), amount=0.9)
+        # for layer in l:
+        #     # prune_weight_interval(layer.weight)
+        #     prune_weight_abs(layer.weight, amount=0.9)
         for layer in l:
             layer.set_init_weight(layer.weight)
             layer.set_init_bias(layer.bias)
@@ -77,8 +75,8 @@ def load_dataset(dataset_name):
         data_train = MNIST(root='../datasets', train=True, download=True, transform=transform)
         data_test = MNIST(root='../datasets', train=False, download=True, transform=transform)
     elif dataset_name == 'CIFAR10':
-        num_workers = 8
-        batch_size = 128
+        num_workers = 16
+        batch_size = 512
         transform_train = transforms.Compose([transforms.RandomCrop(32, padding=4), transforms.RandomHorizontalFlip(),
                                               transforms.ToTensor(),
                                               transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))])
@@ -87,8 +85,8 @@ def load_dataset(dataset_name):
         data_train = CIFAR10(root='../datasets', train=True, download=True, transform=transform_train)
         data_test = CIFAR10(root='../datasets', train=False, download=True, transform=transform_test)
     elif dataset_name == 'ImageNet':
-        num_workers = 8
-        batch_size = 128
+        num_workers = 32
+        batch_size = 1024
         transform_train = transforms.Compose([transforms.RandomResizedCrop(224), transforms.RandomHorizontalFlip(),
                                         transforms.ToTensor(),
                                         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])])
@@ -129,6 +127,8 @@ def train(model, dataloader_train, dataloader_test, args):
         optimizer = optim.SGD(model.parameters(), lr=0.4, momentum=0.9)  # for LeNet5
     elif 'VGG' in args.model_name:
         optimizer = optim.SGD(model.parameters(), lr=1e-2, momentum=0.9)  # for VGG
+        if args.granularity_kernel:
+            model = torch.nn.DataParallel(model).to(device)
     else:
         model = torch.nn.DataParallel(model).to(device)
         optimizer = optim.SGD(model.parameters(), lr=0.4, nesterov=True, momentum=0.9, weight_decay=1e-4)
