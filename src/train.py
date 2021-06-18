@@ -120,10 +120,11 @@ def train(model, dataloader_train, dataloader_test, args):
                                         granularity_channel=args.granularity_channel,
                                         granularity_kernel=args.granularity_kernel)  # for LeNet5
         elif 'VGG' in args.model_name:
-            # optimizer = Index_SGD_full(model.parameters(), lr=1e-2, momentum=0.9, ste=args.ste,
-            #                            params_prime=model.parameters(), granularity_channel=args.granularity_channel,
-            #                            granularity_kernel=args.granularity_kernel)  # for VGG
-            optimizer = Index_SGD(model.parameters(), lr=1e-2, momentum=0.9)  # for VGG
+            optimizer = Index_SGD_full(model.parameters(), lr=1e-2, momentum=0.9, ste=args.ste,
+                                       params_prime=model.parameters(), granularity_channel=args.granularity_channel,
+                                       granularity_kernel=args.granularity_kernel)  # for VGG
+            if args.granularity_kernel:
+                model = torch.nn.DataParallel(model).to(device)
         else:
             model = torch.nn.DataParallel(model).to(device)
             optimizer = Index_SGD_full(model.parameters(), lr=0.4, nesterov=True, momentum=0.9, weight_decay=1e-4,
