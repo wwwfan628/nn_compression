@@ -217,20 +217,24 @@ def train(generator, discriminator, dataloader_train, dataloader_test, args):
             d_optimizer.step()
 
             if i == 100:
-                writer.add_images(tag='real_images', img_tensor=images, global_step=epoch)
-                writer.add_images(tag='random_images', img_tensor=random_images, global_step=epoch)
+                images_grid = vutils.make_grid(images, normalize=True)
+                random_images_grid = vutils.make_grid(random_images, normalize=True)
+                writer.add_image(tag='real_images', img_tensor=images_grid, global_step=epoch)
+                writer.add_image(tag='random_images', img_tensor=random_images_grid, global_step=epoch)
                 #vutils.save_image(images, '%s/real_images_epoch_%03d.png' % (args.output, epoch), normalize=True)
                 #vutils.save_image(random_images, '%s/random_images_epoch_%03d.png' % (args.output, epoch), normalize=True)
                 fake_quantized, fake = generator(noise, random_images, gen_labels)
-                writer.add_images(tag='gen_images_quantized', img_tensor=fake_quantized, global_step=epoch)
-                writer.add_images(tag='gen_images', img_tensor=fake, global_step=epoch)
+                fake_quantized_grid = vutils.make_grid(fake_quantized, normalize=True)
+                fake_grid = vutils.make_grid(fake, normalize=True)
+                writer.add_image(tag='gen_images_quantized', img_tensor=fake_quantized_grid, global_step=epoch)
+                writer.add_image(tag='gen_images', img_tensor=fake_grid, global_step=epoch)
                 #vutils.save_image(fake_quantized.detach(), '%s/gen_images_quantized_epoch_%03d.png' % (args.output, epoch), normalize=True)
                 #vutils.save_image(fake.detach(), '%s/gen_images_epoch_%03d.png' % (args.output, epoch), normalize=True)
 
         print("[Epoch: %d/%d]" "[D loss: %f]" "[G loss: %f]" % (epoch + 1, args.max_epoch, d_loss.item(), g_loss.item()))
-        # plot accuracy
-        writer.add_scalar('Discriminator Loss', d_loss.item(), epoch)
-        writer.add_scalar('Generator Loss', g_loss.item(), epoch)
+        # plot loss functions
+        writer.add_scalars('Generator & Discriminator Losses', {'Discriminator Loss': d_loss.item(),
+                                                                'Generator Loss': g_loss.item()}, epoch)
 
         # checkpoints
         if epoch % 100 == 0:
