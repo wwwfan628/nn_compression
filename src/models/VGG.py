@@ -3,11 +3,54 @@ from utils.masked_layers import Conv2dMasked, LinearMasked
 from utils.quantized_layers import Conv2dQuantized, LinearQuantized
 
 
+class VGG_small_without_batch(nn.Module):
+    '''
+    VGG model
+    '''
+    def __init__(self, in_channels=3, num_classes=1000, normal_init=True):
+        super(VGG_small_without_batch, self).__init__()
+        self.features = nn.Sequential(
+            nn.Conv2d(in_channels=in_channels, out_channels=128, kernel_size=3, padding=1),
+            nn.ReLU(inplace=False),
+            nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, padding=1),
+            nn.ReLU(inplace=False),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3, padding=1),
+            nn.ReLU(inplace=False),
+            nn.Conv2d(in_channels=256, out_channels=256, kernel_size=3, padding=1),
+            nn.ReLU(inplace=False),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.Conv2d(in_channels=256, out_channels=512, kernel_size=3, padding=1),
+            nn.ReLU(inplace=False),
+            nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3, padding=1),
+            nn.ReLU(inplace=False),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+        )
+        self.classifier = nn.Sequential(
+            nn.Linear(512 * 4 * 4, 1024),
+            nn.ReLU(inplace=False),
+            nn.Linear(1024, 1024),
+            nn.ReLU(inplace=False),
+            nn.Linear(1024, num_classes),
+        )
+        if normal_init:
+            for m in self.modules():
+                if isinstance(m, nn.Linear) or isinstance(m, nn.Conv2d):
+                    nn.init.kaiming_normal_(m.weight, nonlinearity='relu')
+
+    def forward(self, x):
+        x = self.features(x)
+        x = x.view(x.size(0), -1)
+        x = self.classifier(x)
+        return x
+
+
+
 class VGG_small(nn.Module):
     '''
     VGG model
     '''
-    def __init__(self,in_channels=3, num_classes=1000, normal_init=True):
+    def __init__(self, in_channels=3, num_classes=1000, normal_init=True):
         super(VGG_small, self).__init__()
         self.features = nn.Sequential(
             nn.Conv2d(in_channels=in_channels, out_channels=128, kernel_size=3, padding=1),

@@ -1,5 +1,5 @@
 from models.LeNet5 import LeNet5
-from models.VGG import VGG_small
+from models.VGG import VGG_small_without_batch
 from models.ResNet import ResNet
 from torch import nn, optim
 from torchvision.datasets import MNIST, CIFAR10, ImageNet, ImageFolder
@@ -41,7 +41,7 @@ def main(args):
     if args.model_name == 'LeNet5':
         model = LeNet5(in_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
     elif 'VGG' in args.model_name:
-        model = VGG_small(in_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
+        model = VGG_small_without_batch(in_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
     elif 'ResNet' in args.model_name:
         model = ResNet(ResNet_type=args.model_name, image_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
     else:
@@ -66,8 +66,8 @@ def load_dataset(dataset_name):
         data_train = MNIST(root='../datasets', train=True, download=True, transform=transform)
         data_test = MNIST(root='../datasets', train=False, download=True, transform=transform)
     elif dataset_name == 'CIFAR10':
-        num_workers = 16
-        batch_size = 512
+        num_workers = 8
+        batch_size = 128
         transform_train = transforms.Compose([transforms.RandomCrop(32, padding=4), transforms.RandomHorizontalFlip(),
                                               transforms.ToTensor(),
                                               transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))])
@@ -123,8 +123,8 @@ def train(model, dataloader_train, dataloader_test, args):
             optimizer = Index_SGD_full(model.parameters(), lr=1e-2, momentum=0.9, ste=args.ste,
                                        params_prime=model.parameters(), granularity_channel=args.granularity_channel,
                                        granularity_kernel=args.granularity_kernel)  # for VGG
-            if args.granularity_kernel:
-                model = torch.nn.DataParallel(model).to(device)
+            #if args.granularity_kernel:
+                #model = torch.nn.DataParallel(model).to(device)
         else:
             model = torch.nn.DataParallel(model).to(device)
             optimizer = Index_SGD_full(model.parameters(), lr=0.4, nesterov=True, momentum=0.9, weight_decay=1e-4,
