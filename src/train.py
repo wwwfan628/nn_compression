@@ -1,5 +1,5 @@
 from models.LeNet5 import LeNet5
-from models.VGG import VGG_small_without_batch
+from models.VGG import VGG_small
 from models.ResNet import ResNet
 from torch import nn, optim
 from torchvision.datasets import MNIST, CIFAR10, ImageNet, ImageFolder
@@ -41,7 +41,7 @@ def main(args):
     if args.model_name == 'LeNet5':
         model = LeNet5(in_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
     elif 'VGG' in args.model_name:
-        model = VGG_small_without_batch(in_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
+        model = VGG_small(in_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
     elif 'ResNet' in args.model_name:
         model = ResNet(ResNet_type=args.model_name, image_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
     else:
