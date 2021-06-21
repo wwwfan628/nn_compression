@@ -47,6 +47,14 @@ def main(args):
     else:
         print('Architecture not supported! Please choose from: LeNet5, VGG and ResNet.')
 
+    # no need to optimize batch normalization layer, because of the initialization values are all 1/0s
+    # for the sake of time consumption
+    if args.train_index:
+        l = [module for module in model.modules() if isinstance(module, nn.BatchNorm2d) or isinstance(module, nn.BatchNorm1d)]
+        for layer in l:
+            for parameter in layer.parameters():
+                parameter.requires_grad = False
+
     # train
     if args.train_index:
         init_param_path = './checkpoints/init_param_' + args.model_name + '_' + args.dataset_name + '_train_index.pth'
@@ -123,8 +131,6 @@ def train(model, dataloader_train, dataloader_test, args):
             optimizer = Index_SGD_full(model.parameters(), lr=1e-2, momentum=0.9, ste=args.ste,
                                        params_prime=model.parameters(), granularity_channel=args.granularity_channel,
                                        granularity_kernel=args.granularity_kernel)  # for VGG
-            #if args.granularity_kernel:
-                #model = torch.nn.DataParallel(model).to(device)
         else:
             model = torch.nn.DataParallel(model).to(device)
             optimizer = Index_SGD_full(model.parameters(), lr=0.4, nesterov=True, momentum=0.9, weight_decay=1e-4,

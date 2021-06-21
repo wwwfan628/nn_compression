@@ -176,7 +176,7 @@ class Index_SGD_full(Optimizer):
             if params_prime is None:
                 raise ValueError("Invalid params_prime value: {}".format(params_prime))
             else:
-                params_prime = list(param_prime.clone().detach().to(device) for param_prime in params_prime)
+                params_prime = list(param_prime.clone().detach().to(device) for param_prime in params_prime if param_prime.grad is not None)
         else:
             if params_prime is not None:
                 params_prime = None
@@ -273,7 +273,7 @@ class Index_Adam_full(Optimizer):
             if params_prime is None:
                 raise ValueError("Invalid params_prime value: {}".format(params_prime))
             else:
-                params_prime = list(param_prime.clone().detach().to(device) for param_prime in params_prime)
+                params_prime = list(param_prime.clone().detach().to(device) for param_prime in params_prime if param_prime.grad is not None)
         else:
             if params_prime is not None:
                 params_prime = None

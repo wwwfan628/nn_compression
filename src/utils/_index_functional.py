@@ -199,28 +199,16 @@ def index_sgd_full(params: List[Tensor], d_p_list: List[Tensor], momentum_buffer
 
             #param.add_(d_p, alpha=-lr)  # sgd, from pytorch original code
             param_prime.add_(d_p, alpha=-lr)
-            if granularity_kernel:
-                if len(param.shape) > 2:  # nn.Conv2D weight
-                    for idx_dim0, param_dim0 in enumerate(param):
-                        for idx_dim1, param_dim1 in enumerate(param_dim0):
-                            param_dim1_tmp, _ = torch.sort(param_dim1.view(-1))
-                            param_dim1.view(-1)[torch.argsort(param_prime[idx_dim0, idx_dim1].view(-1))] = param_dim1_tmp
-                elif len(param.shape) > 1:    # nn.Linear weight
-                    for idx_dim0, param_dim0 in enumerate(param):
-                        param_dim0_tmp, _ = torch.sort(param_dim0.view(-1))
-                        param_dim0.view(-1)[torch.argsort(param_prime[idx_dim0].view(-1))] = param_dim0_tmp
-                else:    # bias
-                    param_tmp, _ = torch.sort(param.view(-1))
-                    param.view(-1)[torch.argsort(param_prime.view(-1))] = param_tmp
-            elif granularity_channel:
-                if len(param.shape) > 1:    # nn.Linear or nn.Conv2D weight
-                    for idx_dim0, param_dim0 in enumerate(param):
-                        param_dim0_tmp, _ = torch.sort(param_dim0.view(-1))
-                        param_dim0.view(-1)[torch.argsort(param_prime[idx_dim0].view(-1))] = param_dim0_tmp
-                else:   # bias
-                    param_tmp, _ = torch.sort(param.view(-1))
-                    param.view(-1)[torch.argsort(param_prime.view(-1))] = param_tmp
-            else:
+            if granularity_kernel and len(param.shape) > 2:  # nn.Conv2D weight
+                for idx_dim0, param_dim0 in enumerate(param):
+                    for idx_dim1, param_dim1 in enumerate(param_dim0):
+                        param_dim1_tmp, _ = torch.sort(param_dim1.view(-1))
+                        param_dim1.view(-1)[torch.argsort(param_prime[idx_dim0, idx_dim1].view(-1))] = param_dim1_tmp
+            elif (granularity_channel or granularity_kernel) and len(param.shape) > 1:  # nn.Linear or nn.Conv2D weight
+                for idx_dim0, param_dim0 in enumerate(param):
+                    param_dim0_tmp, _ = torch.sort(param_dim0.view(-1))
+                    param_dim0.view(-1)[torch.argsort(param_prime[idx_dim0].view(-1))] = param_dim0_tmp
+            else:   # bias
                 param_tmp, _ = torch.sort(param.view(-1))
                 param.view(-1)[torch.argsort(param_prime.view(-1))] = param_tmp
     else:
@@ -245,28 +233,16 @@ def index_sgd_full(params: List[Tensor], d_p_list: List[Tensor], momentum_buffer
 
             #param.add_(d_p, alpha=-lr)  # sgd, from pytorch original code
             param_new = param.add(d_p, alpha=-lr)
-            if granularity_kernel:
-                if len(param.shape) > 2:  # nn.Conv2D weight
-                    for idx_dim0, param_dim0 in enumerate(param):
-                        for idx_dim1, param_dim1 in enumerate(param_dim0):
-                            param_dim1_tmp, _ = torch.sort(param_dim1.view(-1))
-                            param_dim1.view(-1)[torch.argsort(param_new[idx_dim0, idx_dim1].view(-1))] = param_dim1_tmp
-                elif len(param.shape) > 1:    # nn.Linear weight
-                    for idx_dim0, param_dim0 in enumerate(param):
-                        param_dim0_tmp, _ = torch.sort(param_dim0.view(-1))
-                        param_dim0.view(-1)[torch.argsort(param_new[idx_dim0].view(-1))] = param_dim0_tmp
-                else:    # bias
-                    param_tmp, _ = torch.sort(param.view(-1))
-                    param.view(-1)[torch.argsort(param_new.view(-1))] = param_tmp
-            elif granularity_channel:
-                if len(param.shape) > 1:    # nn.Linear or nn.Conv2D weight
-                    for idx_dim0, param_dim0 in enumerate(param):
-                        param_dim0_tmp, _ = torch.sort(param_dim0.view(-1))
-                        param_dim0.view(-1)[torch.argsort(param_new[idx_dim0].view(-1))] = param_dim0_tmp
-                else:   # bias
-                    param_tmp, _ = torch.sort(param.view(-1))
-                    param.view(-1)[torch.argsort(param_new.view(-1))] = param_tmp
-            else:
+            if granularity_kernel and len(param.shape) > 2:  # nn.Conv2D weight:
+                for idx_dim0, param_dim0 in enumerate(param):
+                    for idx_dim1, param_dim1 in enumerate(param_dim0):
+                        param_dim1_tmp, _ = torch.sort(param_dim1.view(-1))
+                        param_dim1.view(-1)[torch.argsort(param_new[idx_dim0, idx_dim1].view(-1))] = param_dim1_tmp
+            elif (granularity_channel or granularity_kernel) and len(param.shape) > 1:  # nn.Linear or nn.Conv2D weight
+                for idx_dim0, param_dim0 in enumerate(param):
+                    param_dim0_tmp, _ = torch.sort(param_dim0.view(-1))
+                    param_dim0.view(-1)[torch.argsort(param_new[idx_dim0].view(-1))] = param_dim0_tmp
+            else:  # bias
                 param_tmp, _ = torch.sort(param.view(-1))
                 param.view(-1)[torch.argsort(param_new.view(-1))] = param_tmp
 
@@ -305,28 +281,16 @@ def index_adam_full(params: List[Tensor], grads: List[Tensor], exp_avgs: List[Te
             step_size = lr / bias_correction1
             # param.addcdiv_(exp_avg, denom, value=-step_size)   # adam, from pytorch original code
             param_prime.addcdiv_(exp_avg, denom, value=-step_size)
-            if granularity_kernel:
-                if len(param.shape) > 2:  # nn.Conv2D weight
-                    for idx_dim0, param_dim0 in enumerate(param):
-                        for idx_dim1, param_dim1 in enumerate(param_dim0):
-                            param_dim1_tmp, _ = torch.sort(param_dim1.view(-1))
-                            param_dim1.view(-1)[torch.argsort(param_prime[idx_dim0, idx_dim1].view(-1))] = param_dim1_tmp
-                elif len(param.shape) > 1:    # nn.Linear weight
-                    for idx_dim0, param_dim0 in enumerate(param):
-                        param_dim0_tmp, _ = torch.sort(param_dim0.view(-1))
-                        param_dim0.view(-1)[torch.argsort(param_prime[idx_dim0].view(-1))] = param_dim0_tmp
-                else:    # bias
-                    param_tmp, _ = torch.sort(param.view(-1))
-                    param.view(-1)[torch.argsort(param_prime.view(-1))] = param_tmp
-            elif granularity_channel:
-                if len(param.shape) > 1:    # nn.Linear or nn.Conv2D weight
-                    for idx_dim0, param_dim0 in enumerate(param):
-                        param_dim0_tmp, _ = torch.sort(param_dim0.view(-1))
-                        param_dim0.view(-1)[torch.argsort(param_prime[idx_dim0].view(-1))] = param_dim0_tmp
-                else:   # bias
-                    param_tmp, _ = torch.sort(param.view(-1))
-                    param.view(-1)[torch.argsort(param_prime.view(-1))] = param_tmp
-            else:
+            if granularity_kernel and len(param.shape) > 2:  # nn.Conv2D weight
+                for idx_dim0, param_dim0 in enumerate(param):
+                    for idx_dim1, param_dim1 in enumerate(param_dim0):
+                        param_dim1_tmp, _ = torch.sort(param_dim1.view(-1))
+                        param_dim1.view(-1)[torch.argsort(param_prime[idx_dim0, idx_dim1].view(-1))] = param_dim1_tmp
+            elif (granularity_channel or granularity_kernel) and len(param.shape) > 1:  # nn.Linear or nn.Conv2D weight
+                for idx_dim0, param_dim0 in enumerate(param):
+                    param_dim0_tmp, _ = torch.sort(param_dim0.view(-1))
+                    param_dim0.view(-1)[torch.argsort(param_prime[idx_dim0].view(-1))] = param_dim0_tmp
+            else:  # bias
                 param_tmp, _ = torch.sort(param.view(-1))
                 param.view(-1)[torch.argsort(param_prime.view(-1))] = param_tmp
     else:
@@ -356,29 +320,16 @@ def index_adam_full(params: List[Tensor], grads: List[Tensor], exp_avgs: List[Te
             step_size = lr / bias_correction1
             # param.addcdiv_(exp_avg, denom, value=-step_size)   # adam, from pytorch original code
             param_new = param.addcdiv(exp_avg, denom, value=-step_size)
-            if granularity_kernel:
-                if len(param.shape) > 2:  # nn.Conv2D weight
-                    for idx_dim0, param_dim0 in enumerate(param):
-                        for idx_dim1, param_dim1 in enumerate(param_dim0):
-                            param_dim1_tmp, _ = torch.sort(param_dim1.view(-1))
-                            param_dim1.view(-1)[
-                                torch.argsort(param_new[idx_dim0, idx_dim1].view(-1))] = param_dim1_tmp
-                elif len(param.shape) > 1:  # nn.Linear weight
-                    for idx_dim0, param_dim0 in enumerate(param):
-                        param_dim0_tmp, _ = torch.sort(param_dim0.view(-1))
-                        param_dim0.view(-1)[torch.argsort(param_new[idx_dim0].view(-1))] = param_dim0_tmp
-                else:  # bias
-                    param_tmp, _ = torch.sort(param.view(-1))
-                    param.view(-1)[torch.argsort(param_new.view(-1))] = param_tmp
-            elif granularity_channel:
-                if len(param.shape) > 1:  # nn.Linear or nn.Conv2D weight
-                    for idx_dim0, param_dim0 in enumerate(param):
-                        param_dim0_tmp, _ = torch.sort(param_dim0.view(-1))
-                        param_dim0.view(-1)[torch.argsort(param_new[idx_dim0].view(-1))] = param_dim0_tmp
-                else:  # bias
-                    param_tmp, _ = torch.sort(param.view(-1))
-                    param.view(-1)[torch.argsort(param_new.view(-1))] = param_tmp
-            else:
+            if granularity_kernel and len(param.shape) > 2:  # nn.Conv2D weight
+                for idx_dim0, param_dim0 in enumerate(param):
+                    for idx_dim1, param_dim1 in enumerate(param_dim0):
+                        param_dim1_tmp, _ = torch.sort(param_dim1.view(-1))
+                        param_dim1.view(-1)[torch.argsort(param_new[idx_dim0, idx_dim1].view(-1))] = param_dim1_tmp
+            elif (granularity_channel or granularity_kernel) and len(param.shape) > 1:  # nn.Linear or nn.Conv2D weight
+                for idx_dim0, param_dim0 in enumerate(param):
+                    param_dim0_tmp, _ = torch.sort(param_dim0.view(-1))
+                    param_dim0.view(-1)[torch.argsort(param_new[idx_dim0].view(-1))] = param_dim0_tmp
+            else:   # bias
                 param_tmp, _ = torch.sort(param.view(-1))
                 param.view(-1)[torch.argsort(param_new.view(-1))] = param_tmp
 

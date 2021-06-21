@@ -16,8 +16,10 @@
 set -o errexit
 # execute python file
 python train.py --dataset_name=CIFAR10 --model_name=VGG --train_index --ste --granularity_kernel
+# python train.py --dataset_name=CIFAR10 --model_name=VGG --train_index --ste --granularity_channel
 # python train.py --dataset_name=CIFAR10 --model_name=VGG --train_index --ste
 # python train3.py --dataset_name=CIFAR10 --model_name=VGG --granularity_kernel
+# python train3.py --dataset_name=CIFAR10 --model_name=VGG --granularity_channel
 # python train3.py --dataset_name=CIFAR10 --model_name=VGG
 echo finished at: `date`
 exit 0;
