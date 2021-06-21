@@ -43,7 +43,7 @@ def main(args):
     elif 'VGG' in args.model_name:
         model = VGG_small(in_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
     elif 'ResNet' in args.model_name:
-        model = ResNet(ResNet_type=args.model_name, image_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
+        model = ResNet(in_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
     else:
         print('Architecture not supported! Please choose from: LeNet5, VGG and ResNet.')
 
@@ -98,7 +98,7 @@ def load_dataset(dataset_name):
     in_channels = data_train[0][0].shape[0]
     num_classes = len(data_train.classes)
     dataloader_train = torch.utils.data.DataLoader(data_train, batch_size=batch_size, shuffle=True, pin_memory=True, num_workers=num_workers)
-    dataloader_test = torch.utils.data.DataLoader(data_test, batch_size=batch_size, shuffle=True, pin_memory=True, num_workers=num_workers)
+    dataloader_test = torch.utils.data.DataLoader(data_test, batch_size=batch_size, shuffle=False, pin_memory=True, num_workers=num_workers)
     return in_channels, num_classes, dataloader_train, dataloader_test
 
 

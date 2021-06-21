@@ -1,6 +1,6 @@
-from models.LeNet5 import LeNet5_quantized
-from models.VGG import VGG_small_quantized
-from models.ResNet import ResNet_quantized
+from models.LeNet5 import LeNet5_quantized, LeNet5_quantized_granularity_channel, LeNet5_quantized_granularity_kernel
+from models.VGG import VGG_small_quantized, VGG_small_quantized_granularity_channel, VGG_small_quantized_granularity_kernel
+from models.ResNet import ResNet_quantized, ResNet_quantized_granularity_channel, ResNet_quantized_granularity_kernel
 from torch import nn, optim
 from torchvision.datasets import MNIST, CIFAR10, ImageNet, ImageFolder
 import torch
@@ -39,13 +39,35 @@ def main(args):
 
     # build neural network
     if args.model_name == 'LeNet5':
-        model = LeNet5_quantized(in_channels=in_channels, num_classes=num_classes, normal_init=True, granularity_channel=args.granularity_channel, granularity_kernel=args.granularity_kernel).to(device)
+        if args.granularity_kernel:
+            model = LeNet5_quantized_granularity_kernel(in_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
+        elif args.granularity_channel:
+            model = LeNet5_quantized_granularity_channel(in_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
+        else:
+            model = LeNet5_quantized(in_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
     elif 'VGG' in args.model_name:
-        model = VGG_small_quantized(in_channels=in_channels, num_classes=num_classes, normal_init=True, granularity_channel=args.granularity_channel, granularity_kernel=args.granularity_kernel).to(device)
+        if args.granularity_kernel:
+            model = VGG_small_quantized_granularity_kernel(in_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
+        elif args.granularity_channel:
+            model = VGG_small_quantized_granularity_channel(in_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
+        else:
+            model = VGG_small_quantized(in_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
     elif 'ResNet' in args.model_name:
-        model = ResNet_quantized(ResNet_type=args.model_name, image_channels=in_channels, num_classes=num_classes, normal_init=True, granularity_channel=args.granularity_channel, granularity_kernel=args.granularity_kernel).to(device)
+        if args.granularity_kernel:
+            model = ResNet_quantized_granularity_kernel(in_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
+        elif args.granularity_channel:
+            model = ResNet_quantized_granularity_channel(in_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
+        else:
+            model = ResNet_quantized(in_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
     else:
         print('Architecture not supported! Please choose from: LeNet5, VGG and ResNet.')
+
+    # no need to optimize batch normalization layer, because of the initialization values are all 1/0s
+    # for the sake of time consumption
+    l = [module for module in model.modules() if isinstance(module, nn.BatchNorm2d) or isinstance(module, nn.BatchNorm1d)]
+    for layer in l:
+        for parameter in layer.parameters():
+            parameter.requires_grad = False
 
     # train
     init_param_path = './checkpoints/init_param_' + args.model_name + '_' + args.dataset_name + '_train_index_STE.pth'
@@ -63,8 +85,8 @@ def load_dataset(dataset_name):
         data_train = MNIST(root='../datasets', train=True, download=True, transform=transform)
         data_test = MNIST(root='../datasets', train=False, download=True, transform=transform)
     elif dataset_name == 'CIFAR10':
-        num_workers = 16
-        batch_size = 512
+        num_workers = 8
+        batch_size = 128
         transform_train = transforms.Compose([transforms.RandomCrop(32, padding=4), transforms.RandomHorizontalFlip(),
                                               transforms.ToTensor(),
                                               transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))])
@@ -87,7 +109,7 @@ def load_dataset(dataset_name):
     in_channels = data_train[0][0].shape[0]
     num_classes = len(data_train.classes)
     dataloader_train = torch.utils.data.DataLoader(data_train, batch_size=batch_size, shuffle=True, pin_memory=True, num_workers=num_workers)
-    dataloader_test = torch.utils.data.DataLoader(data_test, batch_size=batch_size, shuffle=True, pin_memory=True, num_workers=num_workers)
+    dataloader_test = torch.utils.data.DataLoader(data_test, batch_size=batch_size, shuffle=False, pin_memory=True, num_workers=num_workers)
     return in_channels, num_classes, dataloader_train, dataloader_test
 
 

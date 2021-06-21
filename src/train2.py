@@ -116,7 +116,7 @@ def load_dataset(dataset_name):
     in_channels = data_train[0][0].shape[0]
     num_classes = len(data_train.classes)
     dataloader_train = torch.utils.data.DataLoader(data_train, batch_size=batch_size, shuffle=True, pin_memory=True)
-    dataloader_test = torch.utils.data.DataLoader(data_test, batch_size=batch_size, shuffle=True, pin_memory=True)
+    dataloader_test = torch.utils.data.DataLoader(data_test, batch_size=batch_size, shuffle=False, pin_memory=True)
     return in_channels, num_classes, dataloader_train, dataloader_test
 
 

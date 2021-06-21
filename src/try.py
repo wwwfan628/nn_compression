@@ -45,7 +45,7 @@ def main(args):
     elif 'VGG' in args.model_name:
         model = VGG_small(in_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
     elif 'ResNet' in args.model_name:
-        model = ResNet(ResNet_type=args.model_name, image_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
+        model = ResNet(in_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
     else:
         print('Architecture not supported! Please choose from: LeNet5, VGG and ResNet.')
 
@@ -56,6 +56,14 @@ def main(args):
         # for layer in l:
         #     #prune_weight_interval(layer.weight)
         #     prune_weight_abs(layer.weight, amount=0.9)
+
+    # no need to optimize batch normalization layer, because of the initialization values are all 1/0s
+    # for the sake of time consumption
+    if args.train_index:
+        l_bn = [module for module in model.modules() if isinstance(module, nn.BatchNorm2d) or isinstance(module, nn.BatchNorm1d)]
+        for layer in l_bn:
+            for parameter in layer.parameters():
+                parameter.requires_grad = False
 
     # train
     if args.train_index:
@@ -76,8 +84,8 @@ def load_dataset(dataset_name):
         data_train = MNIST(root='../datasets', train=True, download=True, transform=transform)
         data_test = MNIST(root='../datasets', train=False, download=True, transform=transform)
     elif dataset_name == 'CIFAR10':
-        num_workers = 16
-        batch_size = 512
+        num_workers = 8
+        batch_size = 128
         transform_train = transforms.Compose([transforms.RandomCrop(32, padding=4), transforms.RandomHorizontalFlip(),
                                               transforms.ToTensor(),
                                               transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))])
@@ -100,7 +108,7 @@ def load_dataset(dataset_name):
     in_channels = data_train[0][0].shape[0]
     num_classes = len(data_train.classes)
     dataloader_train = torch.utils.data.DataLoader(data_train, batch_size=batch_size, shuffle=True, pin_memory=True, num_workers=num_workers)
-    dataloader_test = torch.utils.data.DataLoader(data_test, batch_size=batch_size, shuffle=True, pin_memory=True, num_workers=num_workers)
+    dataloader_test = torch.utils.data.DataLoader(data_test, batch_size=batch_size, shuffle=False, pin_memory=True, num_workers=num_workers)
     return in_channels, num_classes, dataloader_train, dataloader_test
 
 
