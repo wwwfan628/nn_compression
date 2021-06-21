@@ -176,7 +176,7 @@ class Index_SGD_full(Optimizer):
             if params_prime is None:
                 raise ValueError("Invalid params_prime value: {}".format(params_prime))
             else:
-                params_prime = list(param_prime.clone().detach().to(device) for param_prime in params_prime if param_prime.grad is not None)
+                params_prime = list(param_prime.clone().detach().to(device) for param_prime in params_prime)
         else:
             if params_prime is not None:
                 params_prime = None
@@ -210,6 +210,7 @@ class Index_SGD_full(Optimizer):
         for group in self.param_groups:
             params_with_grad = []
             d_p_list = []
+            params_prime_with_grad = []
             momentum_buffer_list = []
             weight_decay = group['weight_decay']
             momentum = group['momentum']
@@ -221,10 +222,11 @@ class Index_SGD_full(Optimizer):
             granularity_channel = group['granularity_channel']
             granularity_kernel = group['granularity_kernel']
 
-            for p in group['params']:
+            for p, p_prime in zip(group['params'], group['params_prime']):
                 if p.grad is not None:
                     params_with_grad.append(p)
                     d_p_list.append(p.grad)
+                    params_prime_with_grad.append(p_prime)
 
                     state = self.state[p]
                     if 'momentum_buffer' not in state:
@@ -233,7 +235,7 @@ class Index_SGD_full(Optimizer):
                         momentum_buffer_list.append(state['momentum_buffer'])
 
             index_sgd_full(params_with_grad, d_p_list, momentum_buffer_list, weight_decay, momentum, lr, dampening,
-                           nesterov, ste, params_prime, granularity_channel, granularity_kernel)
+                           nesterov, ste, params_prime_with_grad, granularity_channel, granularity_kernel)
 
             # update momentum_buffers in state
             for p, momentum_buffer in zip(params_with_grad, momentum_buffer_list):
@@ -273,7 +275,7 @@ class Index_Adam_full(Optimizer):
             if params_prime is None:
                 raise ValueError("Invalid params_prime value: {}".format(params_prime))
             else:
-                params_prime = list(param_prime.clone().detach().to(device) for param_prime in params_prime if param_prime.grad is not None)
+                params_prime = list(param_prime.clone().detach().to(device) for param_prime in params_prime)
         else:
             if params_prime is not None:
                 params_prime = None
@@ -305,18 +307,20 @@ class Index_Adam_full(Optimizer):
         for group in self.param_groups:
             params_with_grad = []
             grads = []
+            params_prime_with_grad = []
             exp_avgs = []
             exp_avg_sqs = []
             state_sums = []
             max_exp_avg_sqs = []
             state_steps = []
 
-            for p in group['params']:
+            for p, p_prime in zip(group['params'], group['params_prime']):
                 if p.grad is not None:
                     params_with_grad.append(p)
                     if p.grad.is_sparse:
                         raise RuntimeError('Adam does not support sparse gradients, please consider SparseAdam instead')
                     grads.append(p.grad)
+                    params_prime_with_grad.append(p_prime)
 
                     state = self.state[p]
                     # Lazy state initialization
@@ -344,7 +348,7 @@ class Index_Adam_full(Optimizer):
             beta1, beta2 = group['betas']
             index_adam_full(params_with_grad, grads, exp_avgs, exp_avg_sqs, max_exp_avg_sqs, state_steps,
                             group['amsgrad'], beta1, beta2, group['lr'], group['weight_decay'], group['eps'],
-                            group['ste'], group['params_prime'], group['granularity_channel'],
+                            group['ste'], params_prime_with_grad, group['granularity_channel'],
                             group['granularity_kernel'])
         return loss
 
