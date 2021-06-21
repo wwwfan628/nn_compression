@@ -153,6 +153,7 @@ def shuffle_images(images_batch):
 def train(generator, discriminator, dataloader_train, dataloader_test, args):
     # Loss functions
     loss_func = torch.nn.BCELoss()
+    loss_func_2 = torch.nn.MSELoss()
     g_optimizer = torch.optim.Adam(generator.parameters(), lr=args.lr, betas=(args.beta, args.beta1))
     d_optimizer = torch.optim.Adam(discriminator.parameters(), lr=args.lr, betas=(args.beta, args.beta1))
 
@@ -192,7 +193,9 @@ def train(generator, discriminator, dataloader_train, dataloader_test, args):
             validity = discriminator(gen_imgs, gen_labels)
 
             # Generative loss function
-            g_loss = loss_func(validity, real_labels)
+            g_loss_1 = loss_func(validity, real_labels)
+            g_loss_2 = loss_func_2(gen_imgs, images)
+            g_loss = 0.5 * (g_loss_1 + g_loss_2)
 
             # Gradients
             g_loss.backward()
