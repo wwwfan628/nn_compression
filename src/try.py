@@ -131,7 +131,7 @@ def train(model, dataloader_train, dataloader_test, args):
                                        params_prime=model.parameters(), granularity_channel=args.granularity_channel,
                                        granularity_kernel=args.granularity_kernel)
         elif 'VGG' in args.model_name:
-            if args.granularity_kernel:
+            if args.granularity_channel or args.granularity_kernel:
                 model = torch.nn.DataParallel(model).to(device)
             optimizer = Index_SGD_full(model.parameters(), lr=1e-2, momentum=0.9, ste=args.ste,
                                        params_prime=model.parameters(), granularity_channel=args.granularity_channel,

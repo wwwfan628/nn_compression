@@ -147,7 +147,7 @@ def train(model, dataloader_train, dataloader_test, args):
     if 'LeNet' in args.model_name:
         optimizer = optim.SGD(model.parameters(), lr=0.4, momentum=0.9)  # for LeNet5
     elif 'VGG' in args.model_name:
-        if args.granularity_kernel:
+        if args.granularity_channel or args.granularity_kernel:
             model = torch.nn.DataParallel(model).to(device)
         optimizer = optim.SGD(model.parameters(), lr=1e-2, momentum=0.9)  # for VGG
     else:
