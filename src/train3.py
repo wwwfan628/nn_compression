@@ -63,7 +63,6 @@ def main(args):
         print('Architecture not supported! Please choose from: LeNet5, VGG and ResNet.')
 
     # no need to optimize batch normalization layer, because of the initialization values are all 1/0s
-    # for the sake of time consumption
     l = [module for module in model.modules() if isinstance(module, nn.BatchNorm2d) or isinstance(module, nn.BatchNorm1d)]
     for layer in l:
         for parameter in layer.parameters():
@@ -86,7 +85,7 @@ def load_dataset(dataset_name):
         data_test = MNIST(root='../datasets', train=False, download=True, transform=transform)
     elif dataset_name == 'CIFAR10':
         num_workers = 8
-        batch_size = 128
+        batch_size = 512
         transform_train = transforms.Compose([transforms.RandomCrop(32, padding=4), transforms.RandomHorizontalFlip(),
                                               transforms.ToTensor(),
                                               transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))])
@@ -137,9 +136,9 @@ def train(model, dataloader_train, dataloader_test, args):
     if 'LeNet' in args.model_name:
         optimizer = optim.Adam(model.parameters(), lr=1e-3)  # for LeNet5
     elif 'VGG' in args.model_name:
-        optimizer = optim.SGD(model.parameters(), lr=1e-2, momentum=0.9)  # for VGG
         if args.granularity_kernel:
             model = torch.nn.DataParallel(model).to(device)
+        optimizer = optim.SGD(model.parameters(), lr=1e-2, momentum=0.9)  # for VGG
     else:
         model = torch.nn.DataParallel(model).to(device)
         optimizer = optim.SGD(model.parameters(), lr=0.4, nesterov=True, momentum=0.9, weight_decay=1e-4)

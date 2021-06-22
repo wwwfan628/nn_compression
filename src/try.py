@@ -57,14 +57,6 @@ def main(args):
         #     #prune_weight_interval(layer.weight)
         #     prune_weight_abs(layer.weight, amount=0.9)
 
-    # no need to optimize batch normalization layer, because of the initialization values are all 1/0s
-    # for the sake of time consumption
-    if args.train_index:
-        l_bn = [module for module in model.modules() if isinstance(module, nn.BatchNorm2d) or isinstance(module, nn.BatchNorm1d)]
-        for layer in l_bn:
-            for parameter in layer.parameters():
-                parameter.requires_grad = False
-
     # train
     if args.train_index:
         init_param_path = './checkpoints/init_param_' + args.model_name + '_' + args.dataset_name + '_train_index_prune.pth'
@@ -85,7 +77,7 @@ def load_dataset(dataset_name):
         data_test = MNIST(root='../datasets', train=False, download=True, transform=transform)
     elif dataset_name == 'CIFAR10':
         num_workers = 8
-        batch_size = 128
+        batch_size = 512
         transform_train = transforms.Compose([transforms.RandomCrop(32, padding=4), transforms.RandomHorizontalFlip(),
                                               transforms.ToTensor(),
                                               transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))])
@@ -139,11 +131,11 @@ def train(model, dataloader_train, dataloader_test, args):
                                        params_prime=model.parameters(), granularity_channel=args.granularity_channel,
                                        granularity_kernel=args.granularity_kernel)
         elif 'VGG' in args.model_name:
+            if args.granularity_kernel:
+                model = torch.nn.DataParallel(model).to(device)
             optimizer = Index_SGD_full(model.parameters(), lr=1e-2, momentum=0.9, ste=args.ste,
                                        params_prime=model.parameters(), granularity_channel=args.granularity_channel,
                                        granularity_kernel=args.granularity_kernel)  # for VGG
-            if args.granularity_kernel:
-                model = torch.nn.DataParallel(model).to(device)
         else:
             model = torch.nn.DataParallel(model).to(device)
             optimizer = Index_SGD_full(model.parameters(), lr=0.4, nesterov=True, momentum=0.9, weight_decay=1e-4,
