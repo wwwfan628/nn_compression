@@ -58,10 +58,10 @@ def main(args):
         model = model.cuda()
 
     # no need to optimize batch normalization layer, because of the initialization values are all 1/0s
-    l = [module for module in model.modules() if isinstance(module, nn.BatchNorm2d) or isinstance(module, nn.BatchNorm1d)]
-    for layer in l:
-        for parameter in layer.parameters():
-            parameter.requires_grad = False
+    # l = [module for module in model.modules() if isinstance(module, nn.BatchNorm2d) or isinstance(module, nn.BatchNorm1d)]
+    # for layer in l:
+    #     for parameter in layer.parameters():
+    #         parameter.requires_grad = False
 
     # train
     init_param_path = './checkpoints/init_param_' + args.model_name + '_' + args.dataset_name + '_train_index_STE.pth'

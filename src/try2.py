@@ -70,10 +70,10 @@ def main(args):
             layer.set_init_bias(layer.bias)
 
     # no need to optimize batch normalization layer, because of the initialization values are all 1/0s
-    l_bn = [module for module in model.modules() if isinstance(module, nn.BatchNorm2d) or isinstance(module, nn.BatchNorm1d)]
-    for layer in l_bn:
-        for parameter in layer.parameters():
-            parameter.requires_grad = False
+    # l_bn = [module for module in model.modules() if isinstance(module, nn.BatchNorm2d) or isinstance(module, nn.BatchNorm1d)]
+    # for layer in l_bn:
+    #     for parameter in layer.parameters():
+    #         parameter.requires_grad = False
 
     # train
     init_param_path = './checkpoints/init_param_' + args.model_name + '_' + args.dataset_name + '_train_index_prune_STE.pth'
