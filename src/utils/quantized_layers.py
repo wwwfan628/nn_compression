@@ -24,8 +24,8 @@ class LinearQuantized(nn.Linear):
             self.init_bias = self.init_bias.cuda()
 
     def forward(self, x):
-        weight = ste_function.apply(self.weight, self.init_weight)
-        bias = ste_function.apply(self.bias, self.init_bias)
+        weight = ste_function.apply(self.weight, self.init_weight.clone().detach().cuda())
+        bias = ste_function.apply(self.bias, self.init_bias.clone().detach().cuda())
         return F.linear(x, weight, bias)
 
 
@@ -49,8 +49,8 @@ class LinearQuantized_granularity_channel(nn.Linear):
             self.init_bias = self.init_bias.cuda()
 
     def forward(self, x):
-        weight = ste_function_granularity_channel.apply(self.weight, self.init_weight)
-        bias = ste_function.apply(self.bias, self.init_bias)
+        weight = ste_function_granularity_channel.apply(self.weight, self.init_weight.clone().detach().cuda())
+        bias = ste_function.apply(self.bias, self.init_bias.clone().detach().cuda())
         return F.linear(x, weight, bias)
 
 
@@ -74,8 +74,8 @@ class Conv2dQuantized(nn.Conv2d):
             self.init_bias = self.init_bias.cuda()
 
     def forward(self, x):
-        weight = ste_function.apply(self.weight, self.init_weight)
-        bias = ste_function.apply(self.bias, self.init_bias)
+        weight = ste_function.apply(self.weight, self.init_weight.clone().detach().cuda())
+        bias = ste_function.apply(self.bias, self.init_bias.clone().detach().cuda())
         return F.conv2d(x, weight, bias, self.stride, self.padding, self.dilation, self.groups)
 
 
@@ -100,8 +100,8 @@ class Conv2dQuantized_granularity_channel(nn.Conv2d):
             self.init_bias = self.init_bias.cuda()
 
     def forward(self, x):
-        weight = ste_function_granularity_channel.apply(self.weight, self.init_weight)
-        bias = ste_function.apply(self.bias, self.init_bias)
+        weight = ste_function_granularity_channel.apply(self.weight, self.init_weight.clone().detach().cuda())
+        bias = ste_function.apply(self.bias, self.init_bias.clone().detach().cuda())
         return F.conv2d(x, weight, bias, self.stride, self.padding, self.dilation, self.groups)
 
 
@@ -126,6 +126,6 @@ class Conv2dQuantized_granularity_kernel(nn.Conv2d):
             self.init_bias = self.init_bias.cuda()
 
     def forward(self, x):
-        weight = ste_function_granularity_kernel.apply(self.weight, self.init_weight)
-        bias = ste_function.apply(self.bias, self.init_bias)
+        weight = ste_function_granularity_kernel.apply(self.weight, self.init_weight.clone().detach().cuda())
+        bias = ste_function.apply(self.bias, self.init_bias.clone().detach().cuda())
         return F.conv2d(x, weight, bias, self.stride, self.padding, self.dilation, self.groups)
