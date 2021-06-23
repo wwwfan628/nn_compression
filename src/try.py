@@ -12,6 +12,13 @@ from utils.index_optimizer import Index_Adam_full, Index_SGD_full
 from utils.prune_weight import prune_weight_interval, prune_weight_abs, prune_weight_abs_all_layers
 from torchvision import transforms
 
+if torch.cuda.is_available():
+    device = torch.device("cuda")
+    print("Cuda Available")
+else:
+    device = torch.device("cpu")
+    print("No Cuda Available")
+
 
 def main(args):
     # check whether checkpoints directory exist
@@ -34,15 +41,13 @@ def main(args):
 
     # build neural network
     if args.model_name == 'LeNet5':
-        model = LeNet5(in_channels=in_channels, num_classes=num_classes, normal_init=True)
+        model = LeNet5(in_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
     elif 'VGG' in args.model_name:
-        model = VGG_small(in_channels=in_channels, num_classes=num_classes, normal_init=True)
+        model = VGG_small(in_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
     elif 'ResNet' in args.model_name:
-        model = ResNet(in_channels=in_channels, num_classes=num_classes, normal_init=True)
+        model = ResNet(in_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
     else:
         print('Architecture not supported! Please choose from: LeNet5, VGG and ResNet.')
-    if torch.cuda.is_available():
-        model = model.cuda()
 
     # preprocess parameters
     with torch.no_grad():
@@ -72,7 +77,7 @@ def load_dataset(dataset_name):
         data_test = MNIST(root='../datasets', train=False, download=True, transform=transform)
     elif dataset_name == 'CIFAR10':
         num_workers = 8
-        batch_size = 512
+        batch_size = 128
         transform_train = transforms.Compose([transforms.RandomCrop(32, padding=4), transforms.RandomHorizontalFlip(),
                                               transforms.ToTensor(),
                                               transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))])
@@ -107,8 +112,7 @@ def validate(model, dataloader_test):
     model.eval()
     with torch.no_grad():
         for i, (images, labels) in enumerate(dataloader_test):
-            if torch.cuda.is_available():
-                images = images.cuda()
+            images = images.to(device)
             x = model(images)
             value, pred = torch.max(x, 1)
             pred = pred.data.cpu()
@@ -128,16 +132,12 @@ def train(model, dataloader_train, dataloader_test, args):
                                        granularity_kernel=args.granularity_kernel)
         elif 'VGG' in args.model_name:
             if args.granularity_channel or args.granularity_kernel:
-                model = torch.nn.DataParallel(model)
-                if torch.cuda.is_available():
-                    model = model.cuda()
+                model = torch.nn.DataParallel(model).to(device)
             optimizer = Index_SGD_full(model.parameters(), lr=1e-2, momentum=0.9, ste=args.ste,
                                        params_prime=model.parameters(), granularity_channel=args.granularity_channel,
                                        granularity_kernel=args.granularity_kernel)  # for VGG
         else:
-            model = torch.nn.DataParallel(model)
-            if torch.cuda.is_available():
-                model = model.cuda()
+            model = torch.nn.DataParallel(model).to(device)
             optimizer = Index_SGD_full(model.parameters(), lr=0.4, nesterov=True, momentum=0.9, weight_decay=1e-4,
                                        ste=args.ste, params_prime=model.parameters(),
                                        granularity_channel=args.granularity_channel,
@@ -161,9 +161,8 @@ def train(model, dataloader_train, dataloader_test, args):
         t0 = time.time()  # start time
         model.train()
         for i, (images, labels) in enumerate(dataloader_train):
-            if torch.cuda.is_available():
-                images = images.cuda()
-                labels = labels.cuda()
+            images = images.to(device)
+            labels = labels.to(device)
             optimizer.zero_grad()
             pred = model(images)
             loss = loss_func(pred, labels)
