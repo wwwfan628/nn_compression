@@ -7,7 +7,7 @@ import random
 from torch.utils.data import DataLoader
 import torch.nn as nn
 import torchvision.utils as vutils
-from torchvision.datasets import MNIST, CIFAR10
+from torchvision.datasets import MNIST, FashionMNIST
 from torch.utils.tensorboard import SummaryWriter
 
 
@@ -252,18 +252,17 @@ def load_dataset(dataset_name):
         transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
         data_train = MNIST(root='../datasets', train=True, download=True, transform=transform)
         data_test = MNIST(root='../datasets', train=False, download=True, transform=transform)
-    elif dataset_name == 'CIFAR10':
+    elif dataset_name == 'FashionMNIST':
         batch_size = 64
-        transform = transforms.Compose([transforms.ToTensor(),
-                                        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
-        data_train = CIFAR10(root='../datasets', train=True, download=True, transform=transform)
-        data_test = CIFAR10(root='../datasets', train=False, download=True, transform=transform)
+        transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5, ), (0.5, ))])
+        data_train = FashionMNIST(root='../datasets', train=True, download=True, transform=transform)
+        data_test = FashionMNIST(root='../datasets', train=False, download=True, transform=transform)
     else:
-        print('Dataset is not supported! Please choose from: MNIST or CIFAR10.')
+        print('Dataset is not supported! Please choose from: MNIST or FashionMNIST.')
     in_channels = data_train[0][0].shape[0]
     num_classes = len(data_train.classes)
     dataloader_train = torch.utils.data.DataLoader(data_train, batch_size=batch_size, shuffle=True, pin_memory=True)
-    dataloader_test = torch.utils.data.DataLoader(data_test, batch_size=batch_size, shuffle=True, pin_memory=True)
+    dataloader_test = torch.utils.data.DataLoader(data_test, batch_size=batch_size, shuffle=False, pin_memory=True)
     return in_channels, num_classes, dataloader_train, dataloader_test
 
 
@@ -279,10 +278,7 @@ def main(args):
     # load dataset
     in_channels, num_classes, dataloader_train, dataloader_test = load_dataset(args.dataset_name)
 
-    if args.dataset_name == 'MNIST':
-        image_shape = (in_channels, 28, 28)
-    elif args.dataset_name == 'CIFAR10':
-        image_shape = (in_channels, 32, 32)
+    image_shape = (in_channels, 28, 28)
     input_dim = int(np.prod(image_shape))
 
     # Building generator
@@ -300,7 +296,7 @@ if __name__ == '__main__':
     # get parameters
     parser = argparse.ArgumentParser(description="Shuffle Input cGAN")
 
-    parser.add_argument('--dataset_name', default='MNIST', help='choose dataset from: MNIST, CIFAR10, ImageNet')
+    parser.add_argument('--dataset_name', default='MNIST', help='choose dataset from: MNIST, FashionMNIST')
     parser.add_argument('--model_name', default='LeNet5', help='choose architecture from: LeNet5, VGG, ResNet18')
     parser.add_argument('--input_dim', type=int, default=100, help='if true train index, else train in normal way')
     parser.add_argument('--max_epoch', type=int, default=200, help='max optimization iteration')

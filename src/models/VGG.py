@@ -43,7 +43,7 @@ class VGG_small(nn.Module):
         )
         if normal_init:
             for m in self.modules():
-                if isinstance(m, nn.Linear) or isinstance(m, nn.Conv2d):
+                if isinstance(m, nn.Linear) or isinstance(m, nn.Conv2d) or isinstance(m, nn.BatchNorm1d) or isinstance(m, nn.BatchNorm2d):
                     nn.init.kaiming_normal_(m.weight, nonlinearity='relu')
 
     def forward(self, x):
