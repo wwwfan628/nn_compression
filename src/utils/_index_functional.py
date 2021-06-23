@@ -3,11 +3,6 @@ import math
 import torch
 from torch import Tensor
 
-if torch.cuda.is_available():
-    device = torch.device("cuda:0")
-else:
-    device = torch.device("cpu")
-
 
 def index_sgd(params: List[Tensor], d_p_list: List[Tensor], momentum_buffer_list: List[Optional[Tensor]],
               weight_decay: float, momentum: float, lr: float, dampening: float, nesterov: bool):

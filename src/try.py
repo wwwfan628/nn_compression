@@ -13,13 +13,6 @@ from utils.prune_weight import prune_weight_interval, prune_weight_abs, prune_we
 from torchvision import transforms
 
 
-if torch.cuda.is_available():
-    device = torch.device("cuda:0")
-else:
-    device = torch.device("cpu")
-    print("No Cuda Available")
-
-
 def main(args):
     # check whether checkpoints directory exist
     path = os.path.join(os.getcwd(), './checkpoints')
@@ -41,13 +34,15 @@ def main(args):
 
     # build neural network
     if args.model_name == 'LeNet5':
-        model = LeNet5(in_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
+        model = LeNet5(in_channels=in_channels, num_classes=num_classes, normal_init=True)
     elif 'VGG' in args.model_name:
-        model = VGG_small(in_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
+        model = VGG_small(in_channels=in_channels, num_classes=num_classes, normal_init=True)
     elif 'ResNet' in args.model_name:
-        model = ResNet(in_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
+        model = ResNet(in_channels=in_channels, num_classes=num_classes, normal_init=True)
     else:
         print('Architecture not supported! Please choose from: LeNet5, VGG and ResNet.')
+    if torch.cuda.is_available():
+        model = model.cuda()
 
     # preprocess parameters
     with torch.no_grad():
@@ -112,7 +107,8 @@ def validate(model, dataloader_test):
     model.eval()
     with torch.no_grad():
         for i, (images, labels) in enumerate(dataloader_test):
-            images = images.to(device)
+            if torch.cuda.is_available():
+                images = images.cuda()
             x = model(images)
             value, pred = torch.max(x, 1)
             pred = pred.data.cpu()
@@ -132,12 +128,16 @@ def train(model, dataloader_train, dataloader_test, args):
                                        granularity_kernel=args.granularity_kernel)
         elif 'VGG' in args.model_name:
             if args.granularity_channel or args.granularity_kernel:
-                model = torch.nn.DataParallel(model).to(device)
+                model = torch.nn.DataParallel(model)
+                if torch.cuda.is_available():
+                    model = model.cuda()
             optimizer = Index_SGD_full(model.parameters(), lr=1e-2, momentum=0.9, ste=args.ste,
                                        params_prime=model.parameters(), granularity_channel=args.granularity_channel,
                                        granularity_kernel=args.granularity_kernel)  # for VGG
         else:
-            model = torch.nn.DataParallel(model).to(device)
+            model = torch.nn.DataParallel(model)
+            if torch.cuda.is_available():
+                model = model.cuda()
             optimizer = Index_SGD_full(model.parameters(), lr=0.4, nesterov=True, momentum=0.9, weight_decay=1e-4,
                                        ste=args.ste, params_prime=model.parameters(),
                                        granularity_channel=args.granularity_channel,
@@ -161,8 +161,9 @@ def train(model, dataloader_train, dataloader_test, args):
         t0 = time.time()  # start time
         model.train()
         for i, (images, labels) in enumerate(dataloader_train):
-            images = images.to(device)
-            labels = labels.to(device)
+            if torch.cuda.is_available():
+                images = images.cuda()
+                labels = labels.cuda()
             optimizer.zero_grad()
             pred = model(images)
             loss = loss_func(pred, labels)
@@ -194,6 +195,11 @@ def train(model, dataloader_train, dataloader_test, args):
 
 
 if __name__ == '__main__':
+
+    if torch.cuda.is_available():
+        print("Cuda Available")
+    else:
+        print("No Cuda Available")
 
     # get parameters
     parser = argparse.ArgumentParser(description="Pruning")

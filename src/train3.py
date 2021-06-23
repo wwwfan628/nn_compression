@@ -11,13 +11,6 @@ import time
 from torchvision import transforms
 
 
-if torch.cuda.is_available():
-    device = torch.device("cuda:0")
-else:
-    device = torch.device("cpu")
-    print("No Cuda Available")
-
-
 def main(args):
     # check whether checkpoints directory exist
     path = os.path.join(os.getcwd(), './checkpoints')
@@ -40,27 +33,29 @@ def main(args):
     # build neural network
     if args.model_name == 'LeNet5':
         if args.granularity_kernel:
-            model = LeNet5_quantized_granularity_kernel(in_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
+            model = LeNet5_quantized_granularity_kernel(in_channels=in_channels, num_classes=num_classes, normal_init=True)
         elif args.granularity_channel:
-            model = LeNet5_quantized_granularity_channel(in_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
+            model = LeNet5_quantized_granularity_channel(in_channels=in_channels, num_classes=num_classes, normal_init=True)
         else:
-            model = LeNet5_quantized(in_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
+            model = LeNet5_quantized(in_channels=in_channels, num_classes=num_classes, normal_init=True)
     elif 'VGG' in args.model_name:
         if args.granularity_kernel:
-            model = VGG_small_quantized_granularity_kernel(in_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
+            model = VGG_small_quantized_granularity_kernel(in_channels=in_channels, num_classes=num_classes, normal_init=True)
         elif args.granularity_channel:
-            model = VGG_small_quantized_granularity_channel(in_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
+            model = VGG_small_quantized_granularity_channel(in_channels=in_channels, num_classes=num_classes, normal_init=True)
         else:
-            model = VGG_small_quantized(in_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
+            model = VGG_small_quantized(in_channels=in_channels, num_classes=num_classes, normal_init=True)
     elif 'ResNet' in args.model_name:
         if args.granularity_kernel:
-            model = ResNet_quantized_granularity_kernel(in_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
+            model = ResNet_quantized_granularity_kernel(in_channels=in_channels, num_classes=num_classes, normal_init=True)
         elif args.granularity_channel:
-            model = ResNet_quantized_granularity_channel(in_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
+            model = ResNet_quantized_granularity_channel(in_channels=in_channels, num_classes=num_classes, normal_init=True)
         else:
-            model = ResNet_quantized(in_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
+            model = ResNet_quantized(in_channels=in_channels, num_classes=num_classes, normal_init=True)
     else:
         print('Architecture not supported! Please choose from: LeNet5, VGG and ResNet.')
+    if torch.cuda.is_available():
+        model = model.cuda()
 
     # no need to optimize batch normalization layer, because of the initialization values are all 1/0s
     l = [module for module in model.modules() if isinstance(module, nn.BatchNorm2d) or isinstance(module, nn.BatchNorm1d)]
@@ -120,7 +115,8 @@ def validate(model, dataloader_test):
     model.eval()
     with torch.no_grad():
         for i, (images, labels) in enumerate(dataloader_test):
-            images = images.to(device)
+            if torch.cuda.is_available():
+                images = images.cuda()
             x = model(images)
             value, pred = torch.max(x, 1)
             pred = pred.data.cpu()
@@ -137,10 +133,14 @@ def train(model, dataloader_train, dataloader_test, args):
         optimizer = optim.Adam(model.parameters(), lr=1e-3)  # for LeNet5
     elif 'VGG' in args.model_name:
         if args.granularity_channel or args.granularity_kernel:
-            model = torch.nn.DataParallel(model).to(device)
+            model = torch.nn.DataParallel(model)
+            if torch.cuda.is_available():
+                model = model.cuda()
         optimizer = optim.SGD(model.parameters(), lr=1e-2, momentum=0.9)  # for VGG
     else:
-        model = torch.nn.DataParallel(model).to(device)
+        model = torch.nn.DataParallel(model)
+        if torch.cuda.is_available():
+            model = model.cuda()
         optimizer = optim.SGD(model.parameters(), lr=0.4, nesterov=True, momentum=0.9, weight_decay=1e-4)
 
     best_test_acc = 0
@@ -159,8 +159,9 @@ def train(model, dataloader_train, dataloader_test, args):
         t0 = time.time()  # start time
         model.train()
         for i, (images, labels) in enumerate(dataloader_train):
-            images = images.to(device)
-            labels = labels.to(device)
+            if torch.cuda.is_available():
+                images = images.cuda()
+                labels = labels.cuda()
             optimizer.zero_grad()
             pred = model(images)
             loss = loss_func(pred, labels)
@@ -189,6 +190,11 @@ def train(model, dataloader_train, dataloader_test, args):
 
 
 if __name__ == '__main__':
+
+    if torch.cuda.is_available():
+        print("Cuda Available")
+    else:
+        print("No Cuda Available")
 
     # get parameters
     parser = argparse.ArgumentParser(description="Traditional Training with STE Layer")
