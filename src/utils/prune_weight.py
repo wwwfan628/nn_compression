@@ -5,6 +5,11 @@ from torch import Tensor
 from scipy import stats
 import numpy as np
 
+if torch.cuda.is_available():
+    device = torch.device("cuda")
+else:
+    device = torch.device("cpu")
+
 
 @torch.no_grad()
 def prune_weight_interval(weight):
@@ -30,14 +35,10 @@ def prune_weight_abs_all_layers(params, amount=0.9):
         params_abs_flatten = np.append(params_abs_flatten, param.abs().view(-1).clone().detach().cpu())
         params_shape.append(param.shape)
         params_flatten_len.append(len(param.view(-1)))
-    params_abs_flatten = torch.Tensor(params_abs_flatten)
-    if torch.cuda.is_available():
-        params_abs_flatten = params_abs_flatten.cuda()
+    params_abs_flatten = torch.Tensor(params_abs_flatten).to(device)
     k = int(len(params_abs_flatten) * (1-amount))
     idx_topk = torch.topk(params_abs_flatten, k=k)[1]
-    mask_flatten = torch.zeros(params_abs_flatten.shape)
-    if torch.cuda.is_available():
-        mask_flatten = mask_flatten.cuda()
+    mask_flatten = torch.zeros(params_abs_flatten.shape).to(device)
     mask_flatten[idx_topk] = 1
     for i, param in enumerate(params):
         if i == 0:

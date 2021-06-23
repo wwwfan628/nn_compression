@@ -10,6 +10,13 @@ import os
 import time
 from torchvision import transforms
 
+if torch.cuda.is_available():
+    device = torch.device("cuda")
+    print("Cuda Available")
+else:
+    device = torch.device("cpu")
+    print("No Cuda Available")
+
 
 def main(args):
     # check whether checkpoints directory exist
@@ -33,29 +40,27 @@ def main(args):
     # build neural network
     if args.model_name == 'LeNet5':
         if args.granularity_kernel:
-            model = LeNet5_quantized_granularity_kernel(in_channels=in_channels, num_classes=num_classes, normal_init=True)
+            model = LeNet5_quantized_granularity_kernel(in_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
         elif args.granularity_channel:
-            model = LeNet5_quantized_granularity_channel(in_channels=in_channels, num_classes=num_classes, normal_init=True)
+            model = LeNet5_quantized_granularity_channel(in_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
         else:
-            model = LeNet5_quantized(in_channels=in_channels, num_classes=num_classes, normal_init=True)
+            model = LeNet5_quantized(in_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
     elif 'VGG' in args.model_name:
         if args.granularity_kernel:
-            model = VGG_small_quantized_granularity_kernel(in_channels=in_channels, num_classes=num_classes, normal_init=True)
+            model = VGG_small_quantized_granularity_kernel(in_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
         elif args.granularity_channel:
-            model = VGG_small_quantized_granularity_channel(in_channels=in_channels, num_classes=num_classes, normal_init=True)
+            model = VGG_small_quantized_granularity_channel(in_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
         else:
-            model = VGG_small_quantized(in_channels=in_channels, num_classes=num_classes, normal_init=True)
+            model = VGG_small_quantized(in_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
     elif 'ResNet' in args.model_name:
         if args.granularity_kernel:
-            model = ResNet_quantized_granularity_kernel(in_channels=in_channels, num_classes=num_classes, normal_init=True)
+            model = ResNet_quantized_granularity_kernel(in_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
         elif args.granularity_channel:
-            model = ResNet_quantized_granularity_channel(in_channels=in_channels, num_classes=num_classes, normal_init=True)
+            model = ResNet_quantized_granularity_channel(in_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
         else:
-            model = ResNet_quantized(in_channels=in_channels, num_classes=num_classes, normal_init=True)
+            model = ResNet_quantized(in_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
     else:
         print('Architecture not supported! Please choose from: LeNet5, VGG and ResNet.')
-    if torch.cuda.is_available():
-        model = model.cuda()
 
     # no need to optimize batch normalization layer, because of the initialization values are all 1/0s
     # l = [module for module in model.modules() if isinstance(module, nn.BatchNorm2d) or isinstance(module, nn.BatchNorm1d)]
@@ -80,7 +85,7 @@ def load_dataset(dataset_name):
         data_test = MNIST(root='../datasets', train=False, download=True, transform=transform)
     elif dataset_name == 'CIFAR10':
         num_workers = 8
-        batch_size = 512
+        batch_size = 128
         transform_train = transforms.Compose([transforms.RandomCrop(32, padding=4), transforms.RandomHorizontalFlip(),
                                               transforms.ToTensor(),
                                               transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))])
@@ -115,8 +120,7 @@ def validate(model, dataloader_test):
     model.eval()
     with torch.no_grad():
         for i, (images, labels) in enumerate(dataloader_test):
-            if torch.cuda.is_available():
-                images = images.cuda()
+            images = images.to(device)
             x = model(images)
             value, pred = torch.max(x, 1)
             pred = pred.data.cpu()
@@ -133,14 +137,10 @@ def train(model, dataloader_train, dataloader_test, args):
         optimizer = optim.Adam(model.parameters(), lr=1e-3)  # for LeNet5
     elif 'VGG' in args.model_name:
         if args.granularity_channel or args.granularity_kernel:
-            model = torch.nn.DataParallel(model)
-            if torch.cuda.is_available():
-                model = model.cuda()
+            model = torch.nn.DataParallel(model).to(device)
         optimizer = optim.SGD(model.parameters(), lr=1e-2, momentum=0.9)  # for VGG
     else:
-        model = torch.nn.DataParallel(model)
-        if torch.cuda.is_available():
-            model = model.cuda()
+        model = torch.nn.DataParallel(model).to(device)
         optimizer = optim.SGD(model.parameters(), lr=0.4, nesterov=True, momentum=0.9, weight_decay=1e-4)
 
     best_test_acc = 0
@@ -159,9 +159,8 @@ def train(model, dataloader_train, dataloader_test, args):
         t0 = time.time()  # start time
         model.train()
         for i, (images, labels) in enumerate(dataloader_train):
-            if torch.cuda.is_available():
-                images = images.cuda()
-                labels = labels.cuda()
+            images = images.to(device)
+            labels = labels.to(device)
             optimizer.zero_grad()
             pred = model(images)
             loss = loss_func(pred, labels)
@@ -190,11 +189,6 @@ def train(model, dataloader_train, dataloader_test, args):
 
 
 if __name__ == '__main__':
-
-    if torch.cuda.is_available():
-        print("Cuda Available")
-    else:
-        print("No Cuda Available")
 
     # get parameters
     parser = argparse.ArgumentParser(description="Traditional Training with STE Layer")

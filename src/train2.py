@@ -42,6 +42,13 @@ VGG_layer_out_grad = {key:[] for key in VGG_layer_names}
 # tensorboard
 writer = SummaryWriter()
 
+if torch.cuda.is_available():
+    device = torch.device("cuda")
+    print("Cuda Available")
+else:
+    device = torch.device("cpu")
+    print("No Cuda Available")
+
 
 def main(args):
     # check whether checkpoints directory exist
@@ -57,15 +64,13 @@ def main(args):
     if args.model_name == 'LeNet5':
         Model_name = 'LeNet5'
         Model_depth = len(LeNet5_layer_names)
-        model = LeNet5(in_channels=in_channels, num_classes=num_classes)
+        model = LeNet5(in_channels=in_channels, num_classes=num_classes).to(device)
     elif 'VGG' in args.model_name:
         Model_name = 'VGG'
         Model_depth = len(VGG_layer_names)
-        model = VGG_small(in_channels=in_channels, num_classes=num_classes)
+        model = VGG_small(in_channels=in_channels, num_classes=num_classes).to(device)
     else:
-        print('Architecture not supported! Please choose from: LeNet5, VGG and ResNet.')
-    if torch.cuda.is_available():
-        model = model.cuda()
+        print('Architecture not supported! Please choose from: LeNet5 and VGG')
 
     # plot after initialization
     l = [module for module in model.modules() if
@@ -125,8 +130,7 @@ def validate(model, dataloader_test):
     model.eval()
     with torch.no_grad():
         for i, (images, labels) in enumerate(dataloader_test):
-            if torch.cuda.is_available():
-                images = images.cuda()
+            images = images.to(device)
             x = model(images)
             _, pred = torch.max(x, 1)
             pred = pred.data.cpu()
@@ -178,9 +182,8 @@ def train(model, dataloader_train, dataloader_test, args):
                     handles.append(layer.register_forward_hook(save_layer_output))
                     handles.append(layer.register_backward_hook(save_grad_output))
             # training
-            if torch.cuda.is_available():
-                images = images.cuda()
-                labels = labels.cuda()
+            images = images.to(device)
+            labels = labels.to(device)
             optimizer.zero_grad()
             pred = model(images)
             loss = loss_func(pred, labels)
@@ -275,11 +278,6 @@ def save_layer_output(self, input, output):
 
 
 if __name__ == '__main__':
-
-    if torch.cuda.is_available():
-        print("Cuda Available")
-    else:
-        print("No Cuda Available")
 
     # get parameters
     parser = argparse.ArgumentParser(description="Traditional Training Plotting")
