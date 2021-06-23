@@ -6,6 +6,8 @@ class ste_function(torch.autograd.Function):
     def forward(ctx, weight, init_weight):
         init_weight_tmp, _ = torch.sort(init_weight.view(-1))
         init_weight.view(-1)[torch.argsort(weight.view(-1))] = init_weight_tmp
+        if torch.cuda.is_available():
+            init_weight = init_weight.cuda()
         return init_weight
 
     @staticmethod
@@ -22,6 +24,8 @@ class ste_function_granularity_channel(torch.autograd.Function):
         for idx_dim0, init_weight_dim0 in enumerate(init_weight):
             init_weight_dim0_tmp, _ = torch.sort(init_weight_dim0.view(-1))
             init_weight_dim0.view(-1)[torch.argsort(weight[idx_dim0].view(-1))] = init_weight_dim0_tmp
+        if torch.cuda.is_available():
+            init_weight = init_weight.cuda()
         return init_weight
 
     @staticmethod
@@ -39,6 +43,8 @@ class ste_function_granularity_kernel(torch.autograd.Function):
             for idx_dim1, init_weight_dim1 in enumerate(init_weight_dim0):
                 init_weight_dim1_tmp, _ = torch.sort(init_weight_dim1.view(-1))
                 init_weight_dim1.view(-1)[torch.argsort(weight[idx_dim0, idx_dim1].view(-1))] = init_weight_dim1_tmp
+        if torch.cuda.is_available():
+            init_weight = init_weight.cuda()
         return init_weight
 
     @staticmethod
