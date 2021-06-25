@@ -217,15 +217,15 @@ class Index_SGD_full(Optimizer):
             nesterov = group['nesterov']
             lr = group['lr']
             ste = group['ste']
-            params_prime = group['params_prime']
             granularity_channel = group['granularity_channel']
             granularity_kernel = group['granularity_kernel']
 
-            for p, p_prime in zip(group['params'], group['params_prime']):
+            for p_ind, p in enumerate(group['params']):
                 if p.grad is not None:
                     params_with_grad.append(p)
                     d_p_list.append(p.grad)
-                    params_prime_with_grad.append(p_prime)
+                    if ste:
+                        params_prime_with_grad.append(group['params_prime'][p_ind])
 
                     state = self.state[p]
                     if 'momentum_buffer' not in state:
@@ -313,13 +313,14 @@ class Index_Adam_full(Optimizer):
             max_exp_avg_sqs = []
             state_steps = []
 
-            for p, p_prime in zip(group['params'], group['params_prime']):
+            for p_ind, p in enumerate(group['params']):
                 if p.grad is not None:
                     params_with_grad.append(p)
                     if p.grad.is_sparse:
                         raise RuntimeError('Adam does not support sparse gradients, please consider SparseAdam instead')
                     grads.append(p.grad)
-                    params_prime_with_grad.append(p_prime)
+                    if group['ste']:
+                        params_prime_with_grad.append(group['params_prime'][p_ind])
 
                     state = self.state[p]
                     # Lazy state initialization
