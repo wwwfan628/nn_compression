@@ -134,21 +134,24 @@ def train(model, dataloader_train, dataloader_test, args):
                                        granularity_channel=args.granularity_channel,
                                        granularity_kernel=args.granularity_kernel)
     else:
-        #optimizer = optim.SGD(model.parameters(), lr=args.lr)
-        optimizer = optim.Adam(model.parameters(), lr=args.lr)
+        if 'LeNet' in args.model_name:
+            optimizer = optim.Adam(model.parameters(), lr=1e-3)
+        elif 'VGG' in args.model_name:
+            optimizer = optim.SGD(model.parameters(), lr=1e-2, momentum=0.9)
     best_test_acc = 0
     corresp_train_acc = 0
     best_epoch = 0
     cur_step = 0
     for epoch in range(args.max_epoch):
-        # adjust lr
-        if 'LeNet' in args.model_name or 'VGG' in args.model_name:
-            optimizer.param_groups[0]['lr'] *= 0.99
-        else:
-            if epoch < 10:
-                optimizer.param_groups[0]['lr'] = 0.4 * (epoch + 1) / 10
-            if epoch == 60 or epoch == 120 or epoch == 180:
-                optimizer.param_groups[0]['lr'] *= 0.1
+        if args.train_index:
+            # adjust lr
+            if 'LeNet' in args.model_name or 'VGG' in args.model_name:
+                optimizer.param_groups[0]['lr'] *= 0.99
+            else:
+                if epoch < 10:
+                    optimizer.param_groups[0]['lr'] = 0.4 * (epoch + 1) / 10
+                if epoch == 60 or epoch == 120 or epoch == 180:
+                    optimizer.param_groups[0]['lr'] *= 0.1
         t0 = time.time()  # start time
         model.train()
         for i, (images, labels) in enumerate(dataloader_train):
@@ -195,7 +198,7 @@ if __name__ == '__main__':
     parser.add_argument('--dataset_name', default='MNIST', help='choose dataset from: MNIST, CIFAR10, ImageNet')
     parser.add_argument('--model_name', default='LeNet5', help='choose architecture from: LeNet5, VGG, ResNet18')
     parser.add_argument('--train_index', action='store_true', help='if true train index, else train in normal way')
-    parser.add_argument('--max_epoch', type=int, default=250, help='max training epoch')
+    parser.add_argument('--max_epoch', type=int, default=100, help='max training epoch')
     parser.add_argument('--lr', type=float, default=1e-3, help='learning rate of optimizer')
     parser.add_argument('--patience', type=int, default=20, help='patience for early stop')
     parser.add_argument('--ste', action='store_true', help='if use straight through estimation or not')
