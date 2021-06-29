@@ -122,8 +122,8 @@ def train(model, dataloader_train, dataloader_test, args):
                                         granularity_channel=args.granularity_channel,
                                         granularity_kernel=args.granularity_kernel)  # for LeNet5
         elif 'VGG' in args.model_name:
-            if args.granularity_kernel or args.granularity_channel:
-                model = torch.nn.DataParallel(model).to(device)
+            # if args.granularity_kernel or args.granularity_channel:
+                # model = torch.nn.DataParallel(model).to(device)
             optimizer = Index_SGD_full(model.parameters(), lr=1e-2, momentum=0.9, ste=args.ste,
                                        params_prime=model.parameters(), granularity_channel=args.granularity_channel,
                                        granularity_kernel=args.granularity_kernel)  # for VGG
@@ -180,7 +180,10 @@ def train(model, dataloader_train, dataloader_test, args):
                 final_param_path = './checkpoints/final_param_' + args.model_name + '_' + args.dataset_name + '_train_index.pth'
             else:
                 final_param_path = './checkpoints/final_param_' + args.model_name + '_' + args.dataset_name + '.pth'
-            torch.save(model.state_dict(), final_param_path)
+            if args.dataset_name == 'ImageNet':
+                torch.save(model.module.state_dict(), final_param_path)
+            else:
+                torch.save(model.state_dict(), final_param_path)
         else:
             cur_step += 1
             if cur_step == args.patience:
