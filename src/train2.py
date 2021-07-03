@@ -64,11 +64,11 @@ def main(args):
     if args.model_name == 'LeNet5':
         Model_name = 'LeNet5'
         Model_depth = len(LeNet5_layer_names)
-        model = LeNet5(in_channels=in_channels, num_classes=num_classes).to(device)
+        model = LeNet5(in_channels=in_channels, num_classes=num_classes, normal_init=args.normal).to(device)
     elif 'VGG' in args.model_name:
         Model_name = 'VGG'
         Model_depth = len(VGG_layer_names)
-        model = VGG_small(in_channels=in_channels, num_classes=num_classes).to(device)
+        model = VGG_small(in_channels=in_channels, num_classes=num_classes, normal_init=args.normal).to(device)
     else:
         print('Architecture not supported! Please choose from: LeNet5 and VGG')
 
@@ -288,6 +288,7 @@ if __name__ == '__main__':
     parser.add_argument('--max_epoch', type=int, default=250, help='max training epoch')
     parser.add_argument('--lr', type=float, default=1e-3, help='learning rate of optimizer')
     parser.add_argument('--patience', type=int, default=20, help='patience for early stop')
+    parser.add_argument('--normal', action='store_true', help='if true, initialize with normal distribution')
     args = parser.parse_args()
 
     print(args)

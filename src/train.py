@@ -41,11 +41,11 @@ def main(args):
 
     # build neural network
     if args.model_name == 'LeNet5':
-        model = LeNet5(in_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
+        model = LeNet5(in_channels=in_channels, num_classes=num_classes, normal_init=args.normal).to(device)
     elif 'VGG' in args.model_name:
-        model = VGG_small(in_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
+        model = VGG_small(in_channels=in_channels, num_classes=num_classes, normal_init=args.normal).to(device)
     elif 'ResNet' in args.model_name:
-        model = ResNet(in_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
+        model = ResNet(in_channels=in_channels, num_classes=num_classes, normal_init=args.normal).to(device)
     else:
         print('Architecture not supported! Please choose from: LeNet5, VGG and ResNet.')
 
@@ -207,6 +207,7 @@ if __name__ == '__main__':
     parser.add_argument('--ste', action='store_true', help='if use straight through estimation or not')
     parser.add_argument('--granularity_channel', action='store_true', help='if true, update index inside one channel')
     parser.add_argument('--granularity_kernel', action='store_true', help='if true, update index inside one kernel')
+    parser.add_argument('--normal', action='store_true', help='if true, initialize with normal distribution')
     args = parser.parse_args()
 
     print(args)

@@ -40,25 +40,25 @@ def main(args):
     # build neural network
     if args.model_name == 'LeNet5':
         if args.granularity_kernel:
-            model = LeNet5_quantized_granularity_kernel(in_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
+            model = LeNet5_quantized_granularity_kernel(in_channels=in_channels, num_classes=num_classes, normal_init=args.normal).to(device)
         elif args.granularity_channel:
-            model = LeNet5_quantized_granularity_channel(in_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
+            model = LeNet5_quantized_granularity_channel(in_channels=in_channels, num_classes=num_classes, normal_init=args.normal).to(device)
         else:
-            model = LeNet5_quantized(in_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
+            model = LeNet5_quantized(in_channels=in_channels, num_classes=num_classes, normal_init=args.normal).to(device)
     elif 'VGG' in args.model_name:
         if args.granularity_kernel:
-            model = VGG_small_quantized_granularity_kernel(in_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
+            model = VGG_small_quantized_granularity_kernel(in_channels=in_channels, num_classes=num_classes, normal_init=args.normal).to(device)
         elif args.granularity_channel:
-            model = VGG_small_quantized_granularity_channel(in_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
+            model = VGG_small_quantized_granularity_channel(in_channels=in_channels, num_classes=num_classes, normal_init=args.normal).to(device)
         else:
-            model = VGG_small_quantized(in_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
+            model = VGG_small_quantized(in_channels=in_channels, num_classes=num_classes, normal_init=args.normal).to(device)
     elif 'ResNet' in args.model_name:
         if args.granularity_kernel:
-            model = ResNet_quantized_granularity_kernel(in_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
+            model = ResNet_quantized_granularity_kernel(in_channels=in_channels, num_classes=num_classes, normal_init=args.normal).to(device)
         elif args.granularity_channel:
-            model = ResNet_quantized_granularity_channel(in_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
+            model = ResNet_quantized_granularity_channel(in_channels=in_channels, num_classes=num_classes, normal_init=args.normal).to(device)
         else:
-            model = ResNet_quantized(in_channels=in_channels, num_classes=num_classes, normal_init=True).to(device)
+            model = ResNet_quantized(in_channels=in_channels, num_classes=num_classes, normal_init=args.normal).to(device)
     else:
         print('Architecture not supported! Please choose from: LeNet5, VGG and ResNet.')
 
@@ -203,6 +203,7 @@ if __name__ == '__main__':
     parser.add_argument('--patience', type=int, default=20, help='patience for early stop')
     parser.add_argument('--granularity_channel', action='store_true', help='if true, index will be optimized inside one channel')
     parser.add_argument('--granularity_kernel', action='store_true', help='if true, index will be optimized inside one kernel')
+    parser.add_argument('--normal', action='store_true', help='if true, initialize with normal distribution')
     args = parser.parse_args()
 
     print(args)
