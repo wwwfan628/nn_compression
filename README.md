@@ -5,7 +5,6 @@
 ![](https://img.shields.io/badge/pytorch-1.7.1-green.svg)
 
 
----
 This repository is code implementation for semester project `Rethinking Information Encoding in Network Compression`.
 The final report can be found here: [paper link](https://github.com/wwwfan628/nn_compression/blob/main/Rethinking_Information_Encoding_in_Network_Compression.pdf).
 
@@ -59,7 +58,6 @@ The final report can be found here: [paper link](https://github.com/wwwfan628/nn
 
 ## Install
 
----
 To run the code, it's required to install python 3.8.5, tensorboard 2.5.0 and pytorch 1.7.1.
 ```
 $ pip install tensorboard
@@ -85,7 +83,6 @@ $ rm n02105855/n02105855_2933.PNG
 
 ## Usage
 
----
 All of the following commands should be executed within the `./src` subfolder. 
 ### 1) Preliminary Experiment
 Execute the preliminary experiment with the following command:
@@ -160,5 +157,4 @@ $ python input_experiment_cGAN.py --dataset_name=MNIST [--max_epoch] [--lr]
 
 ## Credits
 
----
 This implementation was developed by [Yifan Lu](https://github.com/wwwfan628). Please contact Yifan for any enquiry.
