@@ -297,15 +297,14 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Shuffle Input cGAN")
 
     parser.add_argument('--dataset_name', default='MNIST', help='choose dataset from: MNIST, FashionMNIST')
-    parser.add_argument('--model_name', default='LeNet5', help='choose architecture from: LeNet5, VGG, ResNet18')
-    parser.add_argument('--input_dim', type=int, default=100, help='if true train index, else train in normal way')
+    # parser.add_argument('--model_name', default='LeNet5', help='choose architecture from: LeNet5, VGG, ResNet18')
+    # parser.add_argument('--input_dim', type=int, default=100, help='input noise dimension')
     parser.add_argument('--max_epoch', type=int, default=200, help='max optimization iteration')
     parser.add_argument('--lr', type=float, default=0.0002, help='learning rate of optimizer')
-    parser.add_argument('--patience', type=int, default=20, help='patience for early stop')
     parser.add_argument('--latent_dim', type=int, default=100, help='size of latent vector')
     parser.add_argument('--beta', type=float, default=0.5, help='beta for adam optimizer')
     parser.add_argument('--beta1', type=float, default=0.999, help='beta1 for adam optimizer')
-    parser.add_argument('--output', default='./outputs', help='folder to output images and model checkpoints')
+    parser.add_argument('--output', default='./checkpoints', help='folder to output images and model checkpoints')
     parser.add_argument('--randomseed', type=int, help='seed')
 
     args = parser.parse_args()

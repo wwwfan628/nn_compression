@@ -233,7 +233,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--dataset_name', default='MNIST', help='choose dataset from: MNIST, CIFAR10, ImageNet')
     parser.add_argument('--model_name', default='LeNet5', help='choose architecture from: LeNet5, VGG, ResNet18')
-    parser.add_argument('--image_index', type=int, default=17, help='if true train index, else train in normal way')
+    parser.add_argument('--image_index', type=int, default=1, help='if true train index, else train in normal way')
     parser.add_argument('--max_epoch', type=int, default=250, help='max optimization iteration')
     parser.add_argument('--lr', type=float, default=1000, help='learning rate of optimizer')
     parser.add_argument('--patience', type=int, default=20, help='patience for early stop')

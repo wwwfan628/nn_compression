@@ -15,9 +15,9 @@
 # exit on errors
 set -o errexit
 # execute python file
-python try.py --dataset_name=CIFAR10 --model_name=VGG --train_index --ste --granularity_kernel
-# python try.py --dataset_name=CIFAR10 --model_name=VGG --train_index --ste
-# python try2.py --dataset_name=CIFAR10 --model_name=VGG --granularity_kernel
-# python try2.py --dataset_name=CIFAR10 --model_name=VGG
+python prune.py --dataset_name=CIFAR10 --model_name=VGG --train_index --ste --granularity_kernel
+# python prune_experiment.py --dataset_name=CIFAR10 --model_name=VGG --train_index --ste
+# python prune_experiment_v2.py --dataset_name=CIFAR10 --model_name=VGG --granularity_kernel
+# python prune_experiment_v2.py --dataset_name=CIFAR10 --model_name=VGG
 echo finished at: `date`
 exit 0;
