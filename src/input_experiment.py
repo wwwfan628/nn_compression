@@ -44,15 +44,15 @@ def main(args):
 
     # build discriminators & load parameters from path
     discriminator_1 = LeNet5(in_channels=in_channels, num_classes=2, normal_init=True).to(device)
-    discriminator_1.load_state_dict(torch.load('checkpoints/final_param_discriminator_MNIST_1.pth'))
+    discriminator_1.load_state_dict(torch.load(args.discriminator_checkpoint_path_1))
     for parameter in discriminator_1.parameters():
         parameter.requires_grad = False
     discriminator_2 = LeNet5(in_channels=in_channels, num_classes=2, normal_init=True).to(device)
-    discriminator_2.load_state_dict(torch.load('checkpoints/final_param_discriminator_MNIST_2.pth'))
+    discriminator_2.load_state_dict(torch.load(args.discriminator_checkpoint_path_2))
     for parameter in discriminator_2.parameters():
         parameter.requires_grad = False
     discriminator_3 = LeNet5(in_channels=in_channels, num_classes=2, normal_init=True).to(device)
-    discriminator_3.load_state_dict(torch.load('checkpoints/final_param_discriminator_MNIST_3.pth'))
+    discriminator_3.load_state_dict(torch.load(args.discriminator_checkpoint_path_3))
     for parameter in discriminator_3.parameters():
         parameter.requires_grad = False
 
@@ -232,15 +232,16 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Traditional Training")
 
     parser.add_argument('--dataset_name', default='MNIST', help='choose dataset from: MNIST, CIFAR10, ImageNet')
-    parser.add_argument('--model_name', default='LeNet5', help='choose architecture from: LeNet5, VGG, ResNet18')
     parser.add_argument('--image_index', type=int, default=1, help='if true train index, else train in normal way')
     parser.add_argument('--max_epoch', type=int, default=250, help='max optimization iteration')
     parser.add_argument('--lr', type=float, default=1000, help='learning rate of optimizer')
     parser.add_argument('--patience', type=int, default=20, help='patience for early stop')
-    parser.add_argument('--ste', action='store_true', help='if use straight through estimation or not')
     parser.add_argument('--checkpoint_path_1', default='./checkpoints/final_param_LeNet5_MNIST_train_index_STE_4.pth')
     parser.add_argument('--checkpoint_path_2', default='./checkpoints/final_param_LeNet5_MNIST_train_index_STE_5.pth')
     parser.add_argument('--checkpoint_path_3', default='./checkpoints/final_param_LeNet5_MNIST_train_index_STE_6.pth')
+    parser.add_argument('--discriminator_checkpoint_path_1', default='./checkpoints/final_param_discriminator_MNIST_1.pth')
+    parser.add_argument('--discriminator_checkpoint_path_2', default='./checkpoints/final_param_discriminator_MNIST_2.pth')
+    parser.add_argument('--discriminator_checkpoint_path_3', default='./checkpoints/final_param_discriminator_MNIST_3.pth')
     args = parser.parse_args()
 
     print(args)

@@ -132,8 +132,7 @@ def train(model, dataloader_train, dataloader_test, args):
     if args.train_index:
         if 'LeNet' in args.model_name:
             optimizer = Index_Adam_full(model.parameters(), lr=1e-3, ste=args.ste, params_prime=model.parameters(),
-                                        granularity_channel=args.granularity_channel,
-                                        granularity_kernel=args.granularity_kernel)  # for LeNet5
+                                        granularity_channel=False, granularity_kernel=False)  # for LeNet5
         elif 'VGG' in args.model_name:
             # optimizer = Index_SGD_full(model.parameters(), lr=1e-2, momentum=0.9, ste=args.ste,
             #                            params_prime=model.parameters(), granularity_channel=args.granularity_channel,
@@ -211,8 +210,6 @@ if __name__ == '__main__':
     parser.add_argument('--lr', type=float, default=1e-3, help='learning rate of optimizer')
     parser.add_argument('--patience', type=int, default=20, help='patience for early stop')
     parser.add_argument('--ste', action='store_true', help='if use straight through estimation or not')
-    parser.add_argument('--granularity_channel', action='store_true', help='if true, update index inside one channel')
-    parser.add_argument('--granularity_kernel', action='store_true', help='if true, update index inside one kernel')
     args = parser.parse_args()
 
     print(args)
