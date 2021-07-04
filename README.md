@@ -90,10 +90,11 @@ All of the following commands should be executed within the `./src` subfolder.
 ### 1) Preliminary Experiment
 Execute the preliminary experiment with the following command:
 ```
-$ python preliminary_experiment.py --dataset_name=MNIST --model_name=LeNet5
+$ python preliminary_experiment.py --dataset_name=MNIST --model_name=LeNet5 --normal
 ```
-`--dataset_name` can be either `MNIST` or `CIFAR10`, `--model_name` represents the architecture used in the 
-experiment and can be chosen from `LeNet5` or `VGG`.
+`--dataset_name` can be either `MNIST` or `CIFAR10`. `--model_name` represents the architecture used in the 
+experiment and can be chosen from `LeNet5` or `VGG`. By setting `--normal`, the parameters will be initialized 
+with Kaiming normal, otherwise Kaiming uniform. 
 
 To plot the weight distributions, head over to `notebooks/plot_weight_distribution.ipynb` or directly check the 
 tensorboard log with following command:
@@ -107,6 +108,8 @@ distributions, are implemented in script `train_experiment.py`.
 $ python train_experiment.py --dataset_name=MNIST --model_name=LeNet5 --train_index 
                              [--ste] [--normal] [--granularity_channel] [--granularity_kernel]
                              [--max_epoch=100] [--patience=20]
+                             [--init_param_path=$INIT_CHECKPOINT_PATH]
+                             [--final_param_path=$FINAL_CHECKPOINT_PATH]
 ```
 You can turn on/off the optional functions of index optimizer by adding the corresponding optional arguments.
 
@@ -114,23 +117,25 @@ Experiments, where neural networks are pruned before training, are implementd in
 script `prune_experiment.py`. The optional arguments can be added similarly as above.
 ```
 $ python prune_experiment.py --dataset_name=MNIST --model_name=LeNet5 --train_index 
-                             [--ste] [--normal] [--granularity_channel] [--granularity_kernel]
+                             [--ste] [--granularity_channel] [--granularity_kernel]
                              [--max_epoch=100] [--patience=20]
+                             [--init_param_path=$INIT_CHECKPOINT_PATH]
+                             [--final_param_path=$FINAL_CHECKPOINT_PATH]
 ```
 
 ### 3) Input Permutation Experiments
 
-* Train LeNet5 on MNIST with command in `experiment 2)`. Store the final parameters under `$CHECKPOINT_PATH1`.
+* Train LeNet5 on MNIST with command in `experiment 2)`. Store the final parameters under `$CHECKPOINT_PATH1` by setting
+  `--final_param_path=$CHECKPOINT_PATH1`.
 Repeat this step two more times.
 
   
-* Train the prototype of discriminator with following command:
+* Train the prototype of discriminator with following command. Store the final parameter under 
+  `$DISCRIMINATOR_CHECKPOINT_PATH1`. Repeat this step two more times.
 ```
-$ python train_discrminator.py --dataset_name=MNIST --model_name=LeNet5 
+$ python train_discrminator.py --dataset_name=MNIST --final_param_path=$DISCRIMINATOR_CHECKPOINT_PATH1
                              [--train_index] [--ste] [--max_epoch] [--patience]
 ```
-Store the final parameter under `$DISCRIMINATOR_CHECKPOINT_PATH1`. Repeat this step two more times.
-
 
 * Run input permutation experiment using:
 ```

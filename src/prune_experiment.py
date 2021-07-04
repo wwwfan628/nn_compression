@@ -58,10 +58,13 @@ def main(args):
         #     prune_weight_abs(layer.weight, amount=0.9)
 
     # train
-    if args.train_index:
-        init_param_path = './checkpoints/init_param_' + args.model_name + '_' + args.dataset_name + '_train_index_prune.pth'
+    if args.init_param_path == None:
+        if args.train_index:
+            init_param_path = './checkpoints/init_param_' + args.model_name + '_' + args.dataset_name + '_train_index_prune.pth'
+        else:
+            init_param_path = './checkpoints/init_param_' + args.model_name + '_' + args.dataset_name + '_prune.pth'
     else:
-        init_param_path = './checkpoints/init_param_' + args.model_name + '_' + args.dataset_name + '_prune.pth'
+        init_param_path = args.init_param_path
     # save initial parameters
     torch.save(model.state_dict(), init_param_path)
     train(model, dataloader_train, dataloader_test, args)
@@ -180,10 +183,13 @@ def train(model, dataloader_train, dataloader_test, args):
             best_epoch = epoch + 1
             cur_step = 0
             # save checkpoint
-            if args.train_index:
-                final_param_path = './checkpoints/final_param_' + args.model_name + '_' + args.dataset_name + '_train_index_prune.pth'
+            if args.final_param_path == None:
+                if args.train_index:
+                    final_param_path = './checkpoints/final_param_' + args.model_name + '_' + args.dataset_name + '_train_index_prune.pth'
+                else:
+                    final_param_path = './checkpoints/final_param_' + args.model_name + '_' + args.dataset_name + '_prune.pth'
             else:
-                final_param_path = './checkpoints/final_param_' + args.model_name + '_' + args.dataset_name + '_prune.pth'
+                final_param_path = args.final_param_path
             if args.dataset_name == 'ImageNet':
                 torch.save(model.module.state_dict(), final_param_path)
             else:
@@ -215,6 +221,8 @@ if __name__ == '__main__':
     parser.add_argument('--ste', action='store_true', help='if use straight through estimation or not')
     parser.add_argument('--granularity_channel', action='store_true', help='if true, update index inside one channel')
     parser.add_argument('--granularity_kernel', action='store_true', help='if true, update index inside one kernel')
+    parser.add_argument('--init_param_path', default=None)
+    parser.add_argument('--final_param_path', default=None)
     args = parser.parse_args()
 
     print(args)

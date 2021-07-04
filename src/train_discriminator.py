@@ -183,10 +183,7 @@ def train(model, dataloader_train, dataloader_test, args):
             best_epoch = epoch + 1
             cur_step = 0
             # save checkpoint
-            if args.train_index:
-                final_param_path = './checkpoints/final_param_discriminator_' + args.dataset_name + '_train_index.pth'
-            else:
-                final_param_path = './checkpoints/final_param_discriminator_' + args.dataset_name + '_1.pth'
+            final_param_path = args.final_param_path
             torch.save(model.state_dict(), final_param_path)
         else:
             cur_step += 1
@@ -205,6 +202,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--dataset_name', default='MNIST', help='choose dataset from: MNIST, CIFAR10, ImageNet')
     parser.add_argument('--model_name', default='LeNet5', help='choose architecture from: LeNet5, VGG, ResNet18')
+    parser.add_argument('--final_param_path', default='./checkpoints/final_param_discriminator_MNIST.pth')
     parser.add_argument('--train_index', action='store_true', help='if true train index, else train in normal way')
     parser.add_argument('--max_epoch', type=int, default=100, help='max training epoch')
     parser.add_argument('--lr', type=float, default=1e-3, help='learning rate of optimizer')
